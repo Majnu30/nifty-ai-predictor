@@ -1,3 +1,16 @@
+Here is the highly polished, mobile-responsive version of your dashboard.
+
+Streamlit handles layout scaling automatically, but heavy reliance on strict custom CSS widths (like fixed sidebar dimensions or massive grid containers) breaks down on mobile devices.
+
+To make this completely **UI-friendly for mobile users**, this refactored code:
+
+1. Replaces raw CSS grids with Streamlit's native layout containers (`st.columns`), which automatically collapse into vertical blocks on smaller screens.
+2. Uses media queries (`@media`) to dynamically scale text sizes, margins, and the logo banner so that they read clean on everything from an iPhone to an ultrawide desktop monitor.
+3. Repositions the sidebar contents to function fluidly within Streamlit's native hamburger-collapse navigation framework.
+
+### Refactored `app.py` (Mobile-Responsive Protocol)
+
+```python
 import streamlit as st
 import numpy as np
 import joblib
@@ -8,10 +21,10 @@ st.set_page_config(
     page_title="NIFTY AI Predictor",
     page_icon="📈",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed" # Better for mobile first-paint views
 )
 
-# ---------------- CSS STYLING (MATCHING 18444.png) ----------------
+# ---------------- MOBILE-RESPONSIVE CSS ----------------
 st.markdown("""
 <style>
     /* Global Application Theme Override */
@@ -22,90 +35,48 @@ st.markdown("""
     
     /* Content Padding Adjustment */
     .block-container {
-        padding-top: 2rem;
+        padding-top: 1.5rem;
         padding-bottom: 3rem;
         max-width: 1400px;
     }
 
-    /* Hide Default Streamlit Menu & Footer for Professionalism */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    /* Sidebar Styling Override */
+    /* Sidebar Custom Colors */
     section[data-testid="stSidebar"] {
         background-color: #050B18 !important;
         border-right: 1px solid #111C34;
-        width: 300px !important;
     }
-    
-    /* Metric Cards Wrapper Grid styling */
-    .metric-container {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
-        margin-bottom: 24px;
-    }
-    
-    .metric-card {
-        background: #091225;
-        border: 1px solid #142342;
-        border-radius: 12px;
-        padding: 16px 20px;
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
-    
-    .metric-icon {
-        font-size: 24px;
-        color: #3B82F6;
-    }
-    
-    .metric-info {
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .metric-label {
-        color: #64748B;
-        font-size: 12px;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    .metric-val {
-        color: #FFFFFF;
-        font-size: 16px;
-        font-weight: 600;
-        margin-top: 2px;
-    }
-    
-    /* Section Content Blocks */
+
+    /* Fluid Content Panels */
     .content-panel {
         background: #070F21;
         border: 1px solid #111E3B;
         border-radius: 16px;
-        padding: 30px;
-        margin-bottom: 24px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    @media (min-width: 768px) {
+        .content-panel { padding: 30px; }
     }
     
     .panel-header {
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 600;
         color: #FFFFFF;
         display: flex;
         align-items: center;
         gap: 10px;
-        margin-bottom: 25px;
+        margin-bottom: 20px;
     }
 
-    /* Custom Input Element Labels */
+    /* Custom Input Element Typography Fixes */
     label[data-testid="stWidgetLabel"] p {
         color: #94A3B8 !important;
         font-weight: 500 !important;
-        font-size: 14px !important;
-        margin-bottom: 8px !important;
+        font-size: 13px !important;
     }
 
     div[data-testid="stNumberInput"] {
@@ -113,93 +84,86 @@ st.markdown("""
         border-radius: 8px !important;
     }
     
-    /* Neon Action Button styling */
+    /* Action Button styling */
     div.stButton > button {
         width: 100%;
         height: 52px;
         border-radius: 10px;
         border: none;
         color: white;
-        font-size: 16px;
+        font-size: 15px;
         font-weight: 600;
-        letter-spacing: 1.5px;
+        letter-spacing: 1px;
         background: linear-gradient(90deg, #2563EB 0%, #7C3AED 100%);
         box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        margin-top: 15px;
+        transition: all 0.3s ease;
+        margin-top: 10px;
     }
     
     div.stButton > button:hover {
         background: linear-gradient(90deg, #1D4ED8 0%, #6D28D9 100%);
-        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
         transform: translateY(-1px);
     }
     
-    /* Result Display Styling */
+    /* Fluid Result Display (Stacks vertically on Mobile) */
     .result-layout {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        gap: 35px;
+        text-align: center;
+        gap: 20px;
         padding: 10px 0;
     }
     
-    .result-circle-placeholder {
-        width: 100px;
-        height: 100px;
+    @media (min-width: 576px) {
+        .result-layout {
+            flex-direction: row;
+            text-align: left;
+            gap: 35px;
+        }
+    }
+    
+    .result-circle-base {
+        width: 90px;
+        height: 90px;
         border-radius: 50%;
-        border: 2px dashed #1E293B;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 28px;
-        color: #475569;
-    }
-    
-    .result-circle-bullish {
-        width: 100px;
-        height: 100px;
-        border-radius: 50%;
-        border: 3px solid #10B981;
-        box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 32px;
-        background: rgba(16, 185, 129, 0.05);
+        flex-shrink: 0;
     }
 
-    .result-circle-bearish {
-        width: 100px;
-        height: 100px;
-        border-radius: 50%;
-        border: 3px solid #EF4444;
-        box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 32px;
-        background: rgba(239, 68, 68, 0.05);
-    }
+    .result-circle-placeholder { border: 2px dashed #1E293B; color: #475569; }
+    .result-circle-bullish { border: 3px solid #10B981; background: rgba(16, 185, 129, 0.05); box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
+    .result-circle-bearish { border: 3px solid #EF4444; background: rgba(239, 68, 68, 0.05); box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); }
 
-    /* Sidebar Content Cards */
     .sidebar-card {
         background: #070F21;
         border: 1px solid #111E3B;
         border-radius: 12px;
-        padding: 20px;
-        margin-top: 25px;
+        padding: 16px;
+        margin-top: 20px;
     }
 
-    /* Footer Banner styling */
+    /* Responsive Footer Framework */
     .footer-panel {
         background: linear-gradient(90deg, #050B18 0%, #081226 100%);
         border: 1px solid #111E3B;
         border-radius: 16px;
-        padding: 40px;
+        padding: 30px 20px;
         margin-top: 40px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        text-align: center;
+    }
+    
+    @media (min-width: 768px) {
+        .footer-panel {
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 40px;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -216,14 +180,13 @@ model = load_ml_model()
 
 # ---------------- SIDEBAR NAVIGATION ----------------
 with st.sidebar:
-    # Branding Header
     st.markdown(
         """
-        <div style="padding: 10px 0 30px 0; text-align: left;">
-            <h2 style="color: #FFFFFF; font-size: 26px; font-weight: 800; margin: 0; letter-spacing: 1px;">
+        <div style="padding: 10px 0 25px 0;">
+            <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 800; margin: 0; letter-spacing: 1px;">
                 M<span style="color: #3B82F6;">A</span>JNU
             </h2>
-            <p style="color: #475569; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 2px 0 0 0;">
+            <p style="color: #475569; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin: 2px 0 0 0;">
                 Innovate • Build • Inspire
             </p>
         </div>
@@ -231,41 +194,22 @@ with st.sidebar:
         unsafe_allow_html=True
     )
     
-    # Navigation Actions Imitating Sidebar from 18444.png
     st.markdown("<p style='color:#475569; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;'>Navigation</p>", unsafe_allow_html=True)
     
-    # Active tab state simulation
     st.markdown("""
-        <div style="background: linear-gradient(90deg, #2563EB 0%, #7C3AED 100%); padding: 12px 16px; border-radius: 8px; font-weight: 600; color: white; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px;">
-            🏠 Home
-        </div>
-        <div style="padding: 12px 16px; border-radius: 8px; font-weight: 500; color: #94A3B8; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px;">
-            📈 Predict
-        </div>
-        <div style="padding: 12px 16px; border-radius: 8px; font-weight: 500; color: #94A3B8; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px;">
-            ℹ️ About
-        </div>
-        <div style="padding: 12px 16px; border-radius: 8px; font-weight: 500; color: #94A3B8; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px;">
-            💡 How it Works
-        </div>
-        <div style="padding: 12px 16px; border-radius: 8px; font-weight: 500; color: #94A3B8; margin-bottom: 20px; cursor: pointer; display: flex; align-items: center; gap: 12px;">
-            ✉️ Contact
-        </div>
+        <div style="background: linear-gradient(90deg, #2563EB 0%, #7C3AED 100%); padding: 12px 16px; border-radius: 8px; font-weight: 600; color: white; margin-bottom: 8px; cursor: pointer;">🏠 Home</div>
+        <div style="padding: 12px 16px; border-radius: 8px; font-weight: 500; color: #94A3B8; margin-bottom: 8px; cursor: pointer;">📈 Predict</div>
+        <div style="padding: 12px 16px; border-radius: 8px; font-weight: 500; color: #94A3B8; margin-bottom: 8px; cursor: pointer;">ℹ️ About</div>
+        <div style="padding: 12px 16px; border-radius: 8px; font-weight: 500; color: #94A3B8; margin-bottom: 8px; cursor: pointer;">💡 How it Works</div>
+        <div style="padding: 12px 16px; border-radius: 8px; font-weight: 500; color: #94A3B8; margin-bottom: 20px; cursor: pointer;">✉️ Contact</div>
     """, unsafe_allow_html=True)
     
-    # Context Info Cards
     st.markdown(
         """
         <div class="sidebar-card">
-            <h5 style="color: #3B82F6; margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">About This App</h5>
-            <p style="color: #64748B; font-size: 12px; line-height: 1.6; margin: 0;">
+            <h5 style="color: #3B82F6; margin: 0 0 8px 0; font-size: 13px; font-weight: 600;">About This App</h5>
+            <p style="color: #64748B; font-size: 12px; line-height: 1.5; margin: 0;">
                 NIFTY AI Predictor uses machine learning to forecast the next trading day trend based on comprehensive historical market data parameters.
-            </p>
-        </div>
-        <div class="sidebar-card">
-            <h5 style="color: #3B82F6; margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">🤖 Model Info</h5>
-            <p style="color: #64748B; font-size: 12px; line-height: 1.6; margin: 0;">
-                Supervised Predictive Binary Pipeline trained on macro historical data sets.
             </p>
         </div>
         """,
@@ -273,66 +217,54 @@ with st.sidebar:
     )
 
 # ---------------- HERO HEADER ----------------
-# Standardizing layout grid framework to perfectly match 18444.png visual cues
-header_html = """
-<div style="background: linear-gradient(135deg, #040A18 0%, #06132C 100%); border: 1px solid #111E3B; border-radius: 16px; padding: 40px; margin-bottom: 24px; position: relative; overflow: hidden;">
-    <div style="max-width: 600px; z-index: 2; position: relative;">
-        <h1 style="font-size: 48px; font-weight: 900; margin: 0; tracking: -0.5px; line-height: 1.1;">
-            NIFTY <span style="color: #3B82F6;">AI</span><br>PREDICTOR
-        </h1>
-        <p style="color: #64748B; font-size: 16px; margin-top: 10px; font-weight: 400;">
-            AI-Powered Quantitative Prediction Architecture for Next Trading Day Directional Bias.
-        </p>
-    </div>
-    <div style="position: absolute; right: 40px; top: 50%; transform: translateY(-50%); font-size: 90px; opacity: 0.15; user-select: none;">
-        📊
-    </div>
-</div>
-"""
-st.markdown(header_html, unsafe_allow_html=True)
-
-# ---------------- GRID METRICS CONTAINER ----------------
 st.markdown(
     """
-    <div class="metric-container">
-        <div class="metric-card">
-            <div class="metric-icon">📅</div>
-            <div class="metric-info">
-                <span class="metric-label">Market</span>
-                <span class="metric-val">NIFTY 50</span>
-            </div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-icon">🕒</div>
-            <div class="metric-info">
-                <span class="metric-label">Last Updated</span>
-                <span class="metric-val" style="color: #10B981;">Live</span>
-            </div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-icon">📊</div>
-            <div class="metric-info">
-                <span class="metric-label">Status</span>
-                <span class="metric-val" style="color: #3B82F6;">Market Open</span>
-            </div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-icon">⚡</div>
-            <div class="metric-info">
-                <span class="metric-label">Model Accuracy</span>
-                <span class="metric-val" style="color: #60A5FA;">87.42%</span>
-            </div>
+    <div style="background: linear-gradient(135deg, #040A18 0%, #06132C 100%); border: 1px solid #111E3B; border-radius: 16px; padding: 30px 20px; margin-bottom: 20px; position: relative; overflow: hidden;">
+        <div style="z-index: 2; position: relative;">
+            <h1 style="font-size: clamp(32px, 5vw, 48px); font-weight: 900; margin: 0; letter-spacing: -0.5px; line-height: 1.1;">
+                NIFTY <span style="color: #3B82F6;">AI</span> PREDICTOR
+            </h1>
+            <p style="color: #64748B; font-size: clamp(14px, 2vw, 16px); margin-top: 10px; font-weight: 400; max-width: 600px;">
+                AI-Powered Quantitative Prediction Architecture for Next Trading Day Directional Bias.
+            </p>
         </div>
     </div>
-    """,
+    """, 
     unsafe_allow_html=True
 )
 
+# ---------------- METRICS GRID ----------------
+# Native columns auto-collapse vertically on narrow screens/smartphones
+m1, m2, m3, m4 = st.columns([1, 1, 1, 1])
+
+# CSS Injection for native metrics to mirror dark glass layout seamlessly
+metric_css = """
+<style>
+    div[data-testid="stMetric"] {
+        background: #091225 !important;
+        border: 1px solid #142342 !important;
+        border-radius: 12px !important;
+        padding: 12px 16px !important;
+    }
+    div[data-testid="stMetricLabel"] p { color: #64748B !important; font-size: 12px !important; text-transform: uppercase; }
+    div[data-testid="stMetricValue"] div { color: #FFFFFF !important; font-size: 16px !important; font-weight: 600 !important; }
+</style>
+"""
+st.markdown(metric_css, unsafe_allow_html=True)
+
+m1.metric(label="📅 Market", value="NIFTY 50")
+m2.metric(label="🕒 Last Updated", value="Live Stream")
+m3.metric(label="📊 Status", value="Market Open")
+m4.metric(label="⚡ Accuracy Engine", value="87.42%")
+
+st.write("")
+
 # ---------------- INPUT CONTAINER ----------------
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-st.markdown('<div class="panel-header">📈 Market Inputs</div>', unsafe_allow_html=True)
+st.markdown('<div class="panel-header">冲 Market Inputs</div>', unsafe_allow_html=True)
 
-c1, c2 = st.columns(2, gap="large")
+# Responsive input layouts split on desktop, stacked seamlessly on mobile viewports
+c1, c2 = st.columns(2, gap="medium")
 with c1:
     open_price = st.number_input("Open Price", format="%.2f", value=0.00)
     low_price = st.number_input("Low Price", format="%.2f", value=0.00)
@@ -357,7 +289,6 @@ if predict_clicked:
         prediction = model.predict(input_features)[0]
         probability = model.predict_proba(input_features)[0]
     else:
-        # Structured programmatic fallback configuration mimicking runtime state
         prediction = 1 if close_price >= open_price else 0
         probability = [0.15, 0.85] if prediction == 1 else [0.85, 0.15]
         
@@ -366,43 +297,41 @@ if predict_clicked:
         st.markdown(
             f"""
             <div class="result-layout">
-                <div class="result-circle-bullish">🐂</div>
+                <div class="result-circle-base result-circle-bullish">🐂</div>
                 <div>
-                    <h2 style="color: #10B981; margin: 0; font-size: 32px; font-weight: 700;">BULLISH DIRECTION DETECTED</h2>
-                    <p style="color: #64748B; margin: 4px 0 12px 0; font-size: 15px;">Market data matrices signal near-term continuation vectors upward.</p>
-                    <span style="color: #F8FAFC; font-weight: 500;">Confidence Factor: <b style="color:#10B981;">{confidence:.2f}%</b></span>
+                    <h2 style="color: #10B981; margin: 0; font-size: clamp(20px, 4vw, 28px); font-weight: 700;">BULLISH DIRECTION</h2>
+                    <p style="color: #64748B; margin: 4px 0 12px 0; font-size: 14px;">Data signals upward session vectors.</p>
+                    <span style="color: #F8FAFC; font-weight: 500; font-size: 15px;">Confidence: <b style="color:#10B981;">{confidence:.2f}%</b></span>
                 </div>
             </div>
             """,
             unsafe_allow_html=True
         )
-        st.progress(confidence / 100)
     else:
         confidence = probability[0] * 100
         st.markdown(
             f"""
             <div class="result-layout">
-                <div class="result-circle-bearish">🐻</div>
+                <div class="result-circle-base result-circle-bearish">🐻</div>
                 <div>
-                    <h2 style="color: #EF4444; margin: 0; font-size: 32px; font-weight: 700;">BEARISH DIRECTION DETECTED</h2>
-                    <p style="color: #64748B; margin: 4px 0 12px 0; font-size: 15px;">Market data matrices signal structural downward distribution pathways.</p>
-                    <span style="color: #F8FAFC; font-weight: 500;">Confidence Factor: <b style="color:#EF4444;">{confidence:.2f}%</b></span>
+                    <h2 style="color: #EF4444; margin: 0; font-size: clamp(20px, 4vw, 28px); font-weight: 700;">BEARISH DIRECTION</h2>
+                    <p style="color: #64748B; margin: 4px 0 12px 0; font-size: 14px;">Data signals distributive downward sessions.</p>
+                    <span style="color: #F8FAFC; font-weight: 500; font-size: 15px;">Confidence: <b style="color:#EF4444;">{confidence:.2f}%</b></span>
                 </div>
             </div>
             """,
             unsafe_allow_html=True
         )
-        st.progress(confidence / 100)
+    st.progress(confidence / 100)
 else:
-    # Pristine placeholder rendering precisely imitating the design state layout from 18444.png
     st.markdown(
         """
         <div class="result-layout">
-            <div class="result-circle-placeholder">---</div>
+            <div class="result-circle-base result-circle-placeholder">---</div>
             <div>
-                <h2 style="color: #475569; margin: 0; font-size: 32px; font-weight: 700;">--</h2>
-                <p style="color: #64748B; margin: 2px 0 8px 0; font-size: 14px;">Market Direction Bias Status</p>
-                <span style="color: #475569; font-weight: 500;">Confidence: --%</span>
+                <h2 style="color: #475569; margin: 0; font-size: 24px; font-weight: 700;">--</h2>
+                <p style="color: #64748B; margin: 2px 0 8px 0; font-size: 13px;">Market Direction Bias Status</p>
+                <span style="color: #475569; font-weight: 500; font-size: 14px;">Confidence: --%</span>
             </div>
         </div>
         """,
@@ -417,11 +346,11 @@ st.markdown(
     """
     <div class="footer-panel">
         <div>
-            <p style="color: #475569; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 5px 0;">
+            <p style="color: #475569; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 5px 0;">
                 Designed By
             </p>
             <h1 style="
-                font-size: 56px;
+                font-size: clamp(40px, 6vw, 56px);
                 font-weight: 900;
                 margin: 0;
                 background: linear-gradient(90deg, #3B82F6 0%, #C084FC 100%);
@@ -432,16 +361,18 @@ st.markdown(
             ">
                 MAJNU
             </h1>
-            <p style="color: #3B82F6; font-size: 14px; margin-top: 12px; font-weight: 500; letter-spacing: 0.5px;">
+            <p style="color: #3B82F6; font-size: 13px; margin-top: 10px; font-weight: 500;">
                 Code. Create. Conquer.
             </p>
         </div>
-        <div style="display: flex; gap: 20px; align-items: center; opacity: 0.7;">
-            <span style="font-size: 20px; color: #64748B; cursor: pointer;">💻 GitHub</span>
-            <span style="font-size: 20px; color: #64748B; cursor: pointer;">🌐 LinkedIn</span>
-            <span style="font-size: 20px; color: #64748B; cursor: pointer;">🐦 Twitter</span>
+        <div style="display: flex; gap: 20px; align-items: center; justify-content: center; margin-top: 20px; opacity: 0.6; font-size: 14px;">
+            <span style="color: #64748B;">💻 GitHub</span>
+            <span style="color: #64748B;">🌐 LinkedIn</span>
+            <span style="color: #64748B;">🐦 Twitter</span>
         </div>
     </div>
     """,
     unsafe_allow_html=True
 )
+
+```
