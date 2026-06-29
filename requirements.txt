@@ -4,4 +4,4 @@ numpy
 scikit-learn
 joblib
 yfinance
-matplotlib
+pillow
