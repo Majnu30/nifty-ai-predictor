@@ -4,15 +4,8 @@ import joblib
 import pandas as pd
 import os
 import time
-
-# --- GENTLE IMMUNITY CHECK FOR BROKER LIBRARIES ---
-smartapi_installed = False
-try:
-    from SmartApi import SmartConnect
-    import pyotp
-    smartapi_installed = True
-except ImportError:
-    pass
+import requests
+import pyotp
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -239,65 +232,88 @@ mode = st.radio("Select Input Mode", ["Manual Input", "AngelOne Live Stream"], h
 open_price, high_price, low_price, close_price, volume, previous_return = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 api_authenticated = False
 
-# ---------------- ANGEL ONE CONFIGURATION ENTRY ----------------
+# ---------------- NATIVE ANGEL ONE REST API ROUTING ----------------
 if mode == "AngelOne Live Stream":
-    if not smartapi_installed:
-        st.error("The AngelOne package is still compiling in the background on Streamlit servers. Please switch to 'Manual Input' temporarily, or verify your requirements.txt details.")
-    else:
-        st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-        st.markdown('<div class="panel-header">🔐 Secure SmartAPI Gateway Terminal</div>', unsafe_allow_html=True)
+    st.markdown('<div class="content-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="panel-header">🔐 Secure SmartAPI Gateway Terminal</div>', unsafe_allow_html=True)
+    
+    ak_col, cc_col, pw_col, to_col = st.columns(4)
+    with ak_col:
+        API_KEY = st.text_input("SmartAPI Key", type="password", help="Your developer app API key")
+    with cc_col:
+        CLIENT_CODE = st.text_input("Client ID / Code")
+    with pw_col:
+        PASSWORD = st.text_input("Mpin / Password", type="password")
+    with to_col:
+        TOTP_SECRET = st.text_input("TOTP Token String", type="password")
         
-        ak_col, cc_col, pw_col, to_col = st.columns(4)
-        with ak_col:
-            API_KEY = st.text_input("SmartAPI Key", type="password", help="Get this from your SmartAPI developer profile panel")
-        with cc_col:
-            CLIENT_CODE = st.text_input("Client ID / Code", help="Your Angel One login User ID")
-        with pw_col:
-            PASSWORD = st.text_input("Mpin / Password", type="password")
-        with to_col:
-            TOTP_SECRET = st.text_input("TOTP Token String", type="password", help="The secret key string from standard safety apps")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    if API_KEY and CLIENT_CODE and PASSWORD and TOTP_SECRET:
+        try:
+            # Generate local dynamic TOTP challenge matching official specifications
+            totp_challenge = pyotp.TOTP(TOTP_SECRET).now()
             
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        if API_KEY and CLIENT_CODE and PASSWORD and TOTP_SECRET:
-            try:
-                if "PROXY_URL" in os.environ:
-                    os.environ["HTTP_PROXY"] = os.environ.get("PROXY_URL")
-                    os.environ["HTTPS_PROXY"] = os.environ.get("PROXY_URL")
-
-                smart_conn = SmartConnect(api_key=API_KEY)
-                totp = pyotp.TOTP(TOTP_SECRET).now()
-                session_data = smart_conn.generateSession(CLIENT_CODE, PASSWORD, totp)
+            # Step A: Perform Session Authentication Request directly over HTTP
+            auth_url = "https://apiconnect.angelone.in/api/v1/user/auth"
+            headers = {
+                "Content-Type": "application/json",
+                "X-PrivateKey": API_KEY,
+                "Accept": "application/json"
+            }
+            auth_payload = {
+                "clientcode": CLIENT_CODE,
+                "password": PASSWORD,
+                "totp": totp_challenge
+            }
+            
+            # Force traffic routing proxies if configured in the container dashboard environment
+            proxies = {}
+            if "PROXY_URL" in os.environ:
+                proxies = {"http": os.environ["PROXY_URL"], "https": os.environ["PROXY_URL"]}
                 
-                if session_data.get('status'):
-                    api_authenticated = True
-                    
-                    token_map = {"NIFTY 50": "26000", "SENSEX": "1", "BANKEX": "12"}
-                    exchange_map = {"NIFTY 50": "NSE", "SENSEX": "BSE", "BANKEX": "BSE"}
-                    symbol_map = {"NIFTY 50": "Nifty 50", "SENSEX": "SENSEX", "BANKEX": "BANKEX"}
-                    
-                    quote_response = smart_conn.getOHLC(
-                        exchange=exchange_map[target_index], 
-                        tradingsymbol=symbol_map[target_index], 
-                        symboltoken=token_map[target_index]
-                    )
-                    
-                    if quote_response.get('status') and 'data' in quote_response:
-                        live_data = quote_response['data']
-                        open_price = float(live_data.get('open', 0))
-                        high_price = float(live_data.get('high', 0))
-                        low_price = float(live_data.get('low', 0))
-                        close_price = float(live_data.get('close', 0))
-                        volume = float(live_data.get('volume', 0))
-                        previous_return = ((close_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
-                    else:
-                        st.error(f"OHLC data request failed: {quote_response.get('message', 'Invalid response format')}")
+            response = requests.post(auth_url, json=auth_payload, headers=headers, proxies=proxies).json()
+            
+            if response.get('status') == True and 'data' in response:
+                api_authenticated = True
+                jwt_token = response['data']['jwtToken']
+                
+                # Step B: Get market OHLC ticks via API endpoints
+                token_map = {"NIFTY 50": "26000", "SENSEX": "1", "BANKEX": "12"}
+                exchange_map = {"NIFTY 50": "NSE", "SENSEX": "BSE", "BANKEX": "BSE"}
+                
+                market_url = "https://apiconnect.angelone.in/rest/secure/angelbroking/market/data/v1/getMarketData"
+                market_headers = {
+                    "Content-Type": "application/json",
+                    "X-PrivateKey": API_KEY,
+                    "X-JWTToken": f"Bearer {jwt_token}",
+                    "Accept": "application/json"
+                }
+                market_payload = {
+                    "mode": "OHLC",
+                    "exchangeTokens": {
+                        exchange_map[target_index]: [token_map[target_index]]
+                    }
+                }
+                
+                market_res = requests.post(market_url, json=market_payload, headers=market_headers, proxies=proxies).json()
+                
+                if market_res.get('status') == True and 'data' in market_res and 'fetched' in market_res['data']:
+                    live_ticks = market_res['data']['fetched'][0]
+                    open_price = float(live_ticks.get('open', 0))
+                    high_price = float(live_ticks.get('high', 0))
+                    low_price = float(live_ticks.get('low', 0))
+                    close_price = float(live_ticks.get('ltp', 0))
+                    volume = float(live_ticks.get('volume', 0))
+                    previous_return = ((close_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
                 else:
-                    st.error(f"Login Rejected: {session_data.get('message', 'Check client parameters or TOTP configuration')}")
-            except Exception as api_err:
-                st.error(f"Failed to authenticate connection stream to AngelOne Gateway: {api_err}")
-        else:
-            st.info("Awaiting input keys inside the Secure Gateway panel above to pull real-time data ticks.")
+                    st.error("Market API endpoint returned data layout verification anomalies.")
+            else:
+                st.error(f"Gateway Access Denied: {response.get('message', 'Invalid response')}")
+        except Exception as api_err:
+            st.error(f"Network handshake processing timeout: {api_err}")
+    else:
+        st.info("Awaiting input keys inside the Secure Gateway panel above to pull real-time data ticks.")
 
 # ---------------- METRICS HUD STATUS DISPLAY ----------------
 m1, m2, m3, m4 = st.columns([1, 1, 1, 1])
@@ -311,8 +327,8 @@ metric_css = """
 st.markdown(metric_css, unsafe_allow_html=True)
 
 m1.metric(label="📅 Target Index", value=target_index)
-m2.metric(label="🕒 Feed Source", value="AngelOne Stream" if (mode == "AngelOne Live Stream" and smartapi_installed) else "Manual Matrix")
-m3.metric(label="📊 Pipeline Status", value="Tick Live (0s Delay)" if api_authenticated else "Awaiting Gateway Auth")
+m2.metric(label="🕒 Feed Source", value="AngelOne API" if mode == "AngelOne Live Stream" else "Manual Matrix")
+m3.metric(label="📊 Pipeline Status", value="Tick Live" if api_authenticated else "Awaiting Gateway Auth")
 m4.metric(label="⚡ Engine Core", value="ML Inference Ready" if model else "Simulated Mode")
 
 st.write("")
@@ -321,20 +337,17 @@ st.write("")
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
 st.markdown(f'<div class="panel-header">📊 Dynamic Matrix Tuning: {target_index}</div>', unsafe_allow_html=True)
 
-# Determine if input boxes should be interactive or disabled based on live flow state
-disable_inputs = (mode == "AngelOne Live Stream" and smartapi_installed)
-
 c1, c2 = st.columns(2, gap="medium")
 
 with c1:
-    open_price = st.number_input("Open Price (₹)", format="%.2f", value=open_price, disabled=disable_inputs)
-    low_price = st.number_input("Low Price (₹)", format="%.2f", value=low_price, disabled=disable_inputs)
-    volume = st.number_input("Trading Volume", format="%.2f", value=volume, disabled=disable_inputs)
+    open_price = st.number_input("Open Price (₹)", format="%.2f", value=open_price, disabled=(mode == "AngelOne Live Stream"))
+    low_price = st.number_input("Low Price (₹)", format="%.2f", value=low_price, disabled=(mode == "AngelOne Live Stream"))
+    volume = st.number_input("Trading Volume", format="%.2f", value=volume, disabled=(mode == "AngelOne Live Stream"))
 
 with c2:
-    high_price = st.number_input("High Price (₹)", format="%.2f", value=high_price, disabled=disable_inputs)
-    close_price = st.number_input("Close Price (₹)", format="%.2f", value=close_price, disabled=disable_inputs)
-    previous_return = st.number_input("Previous Session Return (%)", format="%.2f", value=previous_return, disabled=disable_inputs)
+    high_price = st.number_input("High Price (₹)", format="%.2f", value=high_price, disabled=(mode == "AngelOne Live Stream"))
+    close_price = st.number_input("Close Price (₹)", format="%.2f", value=close_price, disabled=(mode == "AngelOne Live Stream"))
+    previous_return = st.number_input("Previous Session Return (%)", format="%.2f", value=previous_return, disabled=(mode == "AngelOne Live Stream"))
 
 predict_clicked = st.button("🚀 EXECUTE PREDICTION MATRIX")
 st.markdown('</div>', unsafe_allow_html=True)
