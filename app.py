@@ -1,16 +1,3 @@
-Here is the highly polished, mobile-responsive version of your dashboard.
-
-Streamlit handles layout scaling automatically, but heavy reliance on strict custom CSS widths (like fixed sidebar dimensions or massive grid containers) breaks down on mobile devices.
-
-To make this completely **UI-friendly for mobile users**, this refactored code:
-
-1. Replaces raw CSS grids with Streamlit's native layout containers (`st.columns`), which automatically collapse into vertical blocks on smaller screens.
-2. Uses media queries (`@media`) to dynamically scale text sizes, margins, and the logo banner so that they read clean on everything from an iPhone to an ultrawide desktop monitor.
-3. Repositions the sidebar contents to function fluidly within Streamlit's native hamburger-collapse navigation framework.
-
-### Refactored `app.py` (Mobile-Responsive Protocol)
-
-```python
 import streamlit as st
 import numpy as np
 import joblib
@@ -21,19 +8,17 @@ st.set_page_config(
     page_title="NIFTY AI Predictor",
     page_icon="📈",
     layout="wide",
-    initial_sidebar_state="collapsed" # Better for mobile first-paint views
+    initial_sidebar_state="collapsed"
 )
 
 # ---------------- MOBILE-RESPONSIVE CSS ----------------
 st.markdown("""
 <style>
-    /* Global Application Theme Override */
     .stApp {
         background-color: #030712 !important;
         color: #F8FAFC !important;
     }
     
-    /* Content Padding Adjustment */
     .block-container {
         padding-top: 1.5rem;
         padding-bottom: 3rem;
@@ -43,13 +28,11 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
-    /* Sidebar Custom Colors */
     section[data-testid="stSidebar"] {
         background-color: #050B18 !important;
         border-right: 1px solid #111C34;
     }
 
-    /* Fluid Content Panels */
     .content-panel {
         background: #070F21;
         border: 1px solid #111E3B;
@@ -72,7 +55,6 @@ st.markdown("""
         margin-bottom: 20px;
     }
 
-    /* Custom Input Element Typography Fixes */
     label[data-testid="stWidgetLabel"] p {
         color: #94A3B8 !important;
         font-weight: 500 !important;
@@ -84,7 +66,6 @@ st.markdown("""
         border-radius: 8px !important;
     }
     
-    /* Action Button styling */
     div.stButton > button {
         width: 100%;
         height: 52px;
@@ -105,7 +86,6 @@ st.markdown("""
         transform: translateY(-1px);
     }
     
-    /* Fluid Result Display (Stacks vertically on Mobile) */
     .result-layout {
         display: flex;
         flex-direction: column;
@@ -146,7 +126,6 @@ st.markdown("""
         margin-top: 20px;
     }
 
-    /* Responsive Footer Framework */
     .footer-panel {
         background: linear-gradient(90deg, #050B18 0%, #081226 100%);
         border: 1px solid #111E3B;
@@ -234,10 +213,8 @@ st.markdown(
 )
 
 # ---------------- METRICS GRID ----------------
-# Native columns auto-collapse vertically on narrow screens/smartphones
 m1, m2, m3, m4 = st.columns([1, 1, 1, 1])
 
-# CSS Injection for native metrics to mirror dark glass layout seamlessly
 metric_css = """
 <style>
     div[data-testid="stMetric"] {
@@ -261,9 +238,8 @@ st.write("")
 
 # ---------------- INPUT CONTAINER ----------------
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-st.markdown('<div class="panel-header">冲 Market Inputs</div>', unsafe_allow_html=True)
+st.markdown('<div class="panel-header">📈 Market Inputs</div>', unsafe_allow_html=True)
 
-# Responsive input layouts split on desktop, stacked seamlessly on mobile viewports
 c1, c2 = st.columns(2, gap="medium")
 with c1:
     open_price = st.number_input("Open Price", format="%.2f", value=0.00)
@@ -374,5 +350,3 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
-```
