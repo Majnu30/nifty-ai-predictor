@@ -9,10 +9,3 @@ smartapi-python
 pyotp
 requests
 urllib3
-streamlit
-numpy
-joblib
-pandas
-scikit-learn==1.6.1
-smartapi-python
-pyotp
