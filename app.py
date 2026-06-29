@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import joblib
 import yfinance as yf
+import pandas as pd
 import os
 
 # ---------------- PAGE CONFIG ----------------
@@ -171,6 +172,12 @@ st.markdown("""
             padding: 40px;
         }
     }
+    
+    div[data-testid="stDataFrame"] {
+        background-color: #070F21 !important;
+        border: 1px solid #111E3B !important;
+        border-radius: 12px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -208,7 +215,7 @@ with st.sidebar:
         <div style="padding: 12px 16px; border-radius: 8px; font-weight: 500; color: #94A3B8; margin-bottom: 20px; cursor: pointer;">✉️ Contact</div>
     """, unsafe_allow_html=True)
 
-# ---------------- HERO HEADER WITH MAJNU LOGO ASIDE ----------------
+# ---------------- HERO HEADER ----------------
 st.markdown(
     """
     <div class="responsive-header">
@@ -217,7 +224,7 @@ st.markdown(
                 NIFTY <span style="color: #3B82F6;">AI</span> PREDICTOR
             </h1>
             <p style="color: #64748B; font-size: clamp(14px, 2vw, 16px); margin-top: 10px; font-weight: 400; max-width: 600px;">
-                AI-Powered Quantitative Prediction Architecture for Next Trading Day Directional Bias.
+                AI-Powered Quantitative Prediction Architecture for Next Trading Day Directional Bias & Intraday Options Filtering.
             </p>
         </div>
         <div style="background: rgba(30, 41, 59, 0.3); border: 1px solid #1E293B; padding: 15px 25px; border-radius: 12px; min-width: 160px; text-align: center;">
@@ -237,14 +244,12 @@ st.markdown(
 st.markdown("<p style='color:#94A3B8; font-size:14px; font-weight:500; margin-bottom:8px;'>Data Intake Strategy</p>", unsafe_allow_html=True)
 mode = st.radio("Select Input Mode", ["Manual Input", "Live Market Data"], horizontal=True)
 
-# Initializing feature variables
 open_price, high_price, low_price, close_price, volume, previous_return = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
 # ---------------- YAHOO FINANCE LIVE FEED FETCHING ----------------
 if mode == "Live Market Data":
     try:
         nifty = yf.Ticker("^NSEI")
-        # Fetch data to safely calculate the latest records
         df = nifty.history(period="5d")
         
         if len(df) >= 2:
@@ -304,14 +309,12 @@ st.markdown('<div class="content-panel">', unsafe_allow_html=True)
 st.markdown('<div class="panel-header">🎯 Inference Pipeline Output</div>', unsafe_allow_html=True)
 
 if predict_clicked:
-    # EXACT layout of 6 features to perfectly match your current nifty_model.pkl
     data_array = np.array([[open_price, high_price, low_price, close_price, volume, previous_return]])
     
     if model is not None:
         prediction = model.predict(data_array)[0]
         probability = model.predict_proba(data_array)[0]
     else:
-        # Graceful validation mock fallback configuration if model file isn't found
         prediction = 1 if close_price >= open_price else 0
         probability = [0.18, 0.82] if prediction == 1 else [0.82, 0.18]
         
@@ -346,6 +349,59 @@ if predict_clicked:
             unsafe_allow_html=True
         )
     st.progress(confidence / 100)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ---------------- DYNAMIC OPTION CHAIN SCREENING ----------------
+    st.markdown('<div class="content-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="panel-header">⚡ Recommended Intraday Option Contracts</div>', unsafe_allow_html=True)
+    
+    with st.spinner("Analyzing current weekly options chain..."):
+        try:
+            nifty = yf.Ticker("^NSEI")
+            expirations = nifty.options
+            
+            if expirations:
+                next_expiry = expirations[0] 
+                opt_chain = nifty.option_chain(next_expiry)
+                
+                if prediction == 1:
+                    st.write(f"Showing near-the-money **Call Options (CE)** expiring on **{next_expiry}**:")
+                    df_opts = opt_chain.calls
+                else:
+                    st.write(f"Showing near-the-money **Put Options (PE)** expiring on **{next_expiry}**:")
+                    df_opts = opt_chain.puts
+                
+                spot_price = close_price if close_price > 0 else open_price
+                if spot_price == 0:
+                    spot_price = 24000.0
+                    
+                filtered_opts = df_opts[
+                    (df_opts['strike'] >= spot_price - 250) & 
+                    (df_opts['strike'] <= spot_price + 250)
+                ].copy()
+                
+                display_cols = {
+                    'contractSymbol': 'Contract Symbol',
+                    'strike': 'Strike Price (₹)',
+                    'lastPrice': 'Premium (LTP)',
+                    'change': 'Change (₹)',
+                    'percentChange': 'Change (%)',
+                    'volume': 'Volume',
+                    'openInterest': 'Open Interest (OI)'
+                }
+                
+                filtered_opts = filtered_opts[list(display_cols.keys())].rename(columns=display_cols)
+                
+                if not filtered_opts.empty:
+                    st.dataframe(filtered_opts.reset_index(drop=True), use_container_width=True)
+                else:
+                    st.info("No active contracts found within the selected target range.")
+            else:
+                st.warning("Unable to fetch option chain dates at this moment.")
+        except Exception as opt_err:
+            st.error(f"Options engine calculation timeout: {opt_err}")
+    st.markdown('</div>', unsafe_allow_html=True)
+
 else:
     st.markdown(
         """
@@ -361,8 +417,7 @@ else:
         unsafe_allow_html=True
     )
     st.progress(0.0)
-
-st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- BRAND FOOTER BANNER ----------------
 st.markdown(
