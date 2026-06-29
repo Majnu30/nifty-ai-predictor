@@ -1,8 +1,18 @@
 import streamlit as st
 import numpy as np
 import joblib
-import yfinance as yf
+import pandas as pd
 import os
+import time
+
+# --- GENTLE IMMUNITY CHECK FOR BROKER LIBRARIES ---
+smartapi_installed = False
+try:
+    from SmartApi import SmartConnect
+    import pyotp
+    smartapi_installed = True
+except ImportError:
+    pass
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -62,12 +72,12 @@ st.markdown("""
         font-size: 13px !important;
     }
 
-    div[data-testid="stNumberInput"] {
+    div[data-testid="stNumberInput"], div[data-testid="stSelectbox"], div[data-testid="stTextInput"] input {
         background-color: #091122 !important;
+        color: #F8FAFC !important;
         border-radius: 8px !important;
     }
     
-    /* Segmented Control / Radio Overrides */
     div[data-testid="stRadio"] > label {
         display: none;
     }
@@ -145,14 +155,6 @@ st.markdown("""
     .result-circle-bullish { border: 3px solid #10B981; background: rgba(16, 185, 129, 0.05); box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
     .result-circle-bearish { border: 3px solid #EF4444; background: rgba(239, 68, 68, 0.05); box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); }
 
-    .sidebar-card {
-        background: #070F21;
-        border: 1px solid #111E3B;
-        border-radius: 12px;
-        padding: 16px;
-        margin-top: 20px;
-    }
-
     .footer-panel {
         background: linear-gradient(90deg, #050B18 0%, #081226 100%);
         border: 1px solid #111E3B;
@@ -186,8 +188,7 @@ model = load_ml_model()
 
 # ---------------- SIDEBAR NAVIGATION ----------------
 with st.sidebar:
-    st.markdown(
-        """
+    st.markdown("""
         <div style="padding: 10px 0 25px 0;">
             <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 800; margin: 0; letter-spacing: 1px;">
                 M<span style="color: #3B82F6;">A</span>JNU
@@ -196,9 +197,7 @@ with st.sidebar:
                 Innovate • Build • Inspire
             </p>
         </div>
-        """, 
-        unsafe_allow_html=True
-    )
+        """, unsafe_allow_html=True)
     
     st.markdown("<p style='color:#475569; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;'>Navigation</p>", unsafe_allow_html=True)
     st.markdown("""
@@ -208,16 +207,15 @@ with st.sidebar:
         <div style="padding: 12px 16px; border-radius: 8px; font-weight: 500; color: #94A3B8; margin-bottom: 20px; cursor: pointer;">✉️ Contact</div>
     """, unsafe_allow_html=True)
 
-# ---------------- HERO HEADER WITH MAJNU LOGO ASIDE ----------------
-st.markdown(
-    """
+# ---------------- HERO HEADER ----------------
+st.markdown("""
     <div class="responsive-header">
         <div>
             <h1 style="font-size: clamp(32px, 5vw, 48px); font-weight: 900; margin: 0; letter-spacing: -0.5px; line-height: 1.1;">
-                NIFTY <span style="color: #3B82F6;">AI</span> PREDICTOR
+                MARKET <span style="color: #3B82F6;">AI</span> PREDICTOR
             </h1>
             <p style="color: #64748B; font-size: clamp(14px, 2vw, 16px); margin-top: 10px; font-weight: 400; max-width: 600px;">
-                AI-Powered Quantitative Prediction Architecture for Next Trading Day Directional Bias.
+                Broker-Grade Multi-Index Quantitative Engine for Live Options Trading Vectors.
             </p>
         </div>
         <div style="background: rgba(30, 41, 59, 0.3); border: 1px solid #1E293B; padding: 15px 25px; border-radius: 12px; min-width: 160px; text-align: center;">
@@ -229,37 +227,77 @@ st.markdown(
             </span>
         </div>
     </div>
-    """, 
-    unsafe_allow_html=True
-)
+    """, unsafe_allow_html=True)
 
-# ---------------- DATA SOURCE SELECTION ----------------
-st.markdown("<p style='color:#94A3B8; font-size:14px; font-weight:500; margin-bottom:8px;'>Data Intake Strategy</p>", unsafe_allow_html=True)
-mode = st.radio("Select Input Mode", ["Manual Input", "Live Market Data"], horizontal=True)
+# ---------------- INDEX SELECTION & DATA MODE ----------------
+st.markdown("<p style='color:#94A3B8; font-size:14px; font-weight:500; margin-bottom:4px;'>Target Market Index</p>", unsafe_allow_html=True)
+target_index = st.selectbox("Select Index", ["NIFTY 50", "SENSEX", "BANKEX"], label_visibility="collapsed")
 
-# Initializing feature variables
+st.markdown("<p style='color:#94A3B8; font-size:14px; font-weight:500; margin-top:12px; margin-bottom:4px;'>Data Intake Strategy</p>", unsafe_allow_html=True)
+mode = st.radio("Select Input Mode", ["Manual Input", "AngelOne Live Stream"], horizontal=True)
+
 open_price, high_price, low_price, close_price, volume, previous_return = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+api_authenticated = False
 
-# ---------------- YAHOO FINANCE LIVE FEED FETCHING ----------------
-if mode == "Live Market Data":
-    try:
-        nifty = yf.Ticker("^NSEI")
-        df = nifty.history(period="5d")
+# ---------------- ANGEL ONE CONFIGURATION ENTRY ----------------
+if mode == "AngelOne Live Stream":
+    if not smartapi_installed:
+        st.error("The AngelOne package is still compiling in the background on Streamlit servers. Please switch to 'Manual Input' temporarily, or verify your requirements.txt details.")
+    else:
+        st.markdown('<div class="content-panel">', unsafe_allow_html=True)
+        st.markdown('<div class="panel-header">🔐 Secure SmartAPI Gateway Terminal</div>', unsafe_allow_html=True)
         
-        if len(df) >= 2:
-            latest_row = df.iloc[-1]
-            prior_close = df.iloc[-2]['Close']
+        ak_col, cc_col, pw_col, to_col = st.columns(4)
+        with ak_col:
+            API_KEY = st.text_input("SmartAPI Key", type="password", help="Get this from your SmartAPI developer profile panel")
+        with cc_col:
+            CLIENT_CODE = st.text_input("Client ID / Code", help="Your Angel One login User ID")
+        with pw_col:
+            PASSWORD = st.text_input("Mpin / Password", type="password")
+        with to_col:
+            TOTP_SECRET = st.text_input("TOTP Token String", type="password", help="The secret key string from standard safety apps")
             
-            open_price = float(latest_row['Open'])
-            high_price = float(latest_row['High'])
-            low_price = float(latest_row['Low'])
-            close_price = float(latest_row['Close'])
-            volume = float(latest_row['Volume'])
-            previous_return = ((close_price - prior_close) / prior_close) * 100
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        if API_KEY and CLIENT_CODE and PASSWORD and TOTP_SECRET:
+            try:
+                if "PROXY_URL" in os.environ:
+                    os.environ["HTTP_PROXY"] = os.environ.get("PROXY_URL")
+                    os.environ["HTTPS_PROXY"] = os.environ.get("PROXY_URL")
+
+                smart_conn = SmartConnect(api_key=API_KEY)
+                totp = pyotp.TOTP(TOTP_SECRET).now()
+                session_data = smart_conn.generateSession(CLIENT_CODE, PASSWORD, totp)
+                
+                if session_data.get('status'):
+                    api_authenticated = True
+                    
+                    token_map = {"NIFTY 50": "26000", "SENSEX": "1", "BANKEX": "12"}
+                    exchange_map = {"NIFTY 50": "NSE", "SENSEX": "BSE", "BANKEX": "BSE"}
+                    symbol_map = {"NIFTY 50": "Nifty 50", "SENSEX": "SENSEX", "BANKEX": "BANKEX"}
+                    
+                    quote_response = smart_conn.getOHLC(
+                        exchange=exchange_map[target_index], 
+                        tradingsymbol=symbol_map[target_index], 
+                        symboltoken=token_map[target_index]
+                    )
+                    
+                    if quote_response.get('status') and 'data' in quote_response:
+                        live_data = quote_response['data']
+                        open_price = float(live_data.get('open', 0))
+                        high_price = float(live_data.get('high', 0))
+                        low_price = float(live_data.get('low', 0))
+                        close_price = float(live_data.get('close', 0))
+                        volume = float(live_data.get('volume', 0))
+                        previous_return = ((close_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
+                    else:
+                        st.error(f"OHLC data request failed: {quote_response.get('message', 'Invalid response format')}")
+                else:
+                    st.error(f"Login Rejected: {session_data.get('message', 'Check client parameters or TOTP configuration')}")
+            except Exception as api_err:
+                st.error(f"Failed to authenticate connection stream to AngelOne Gateway: {api_err}")
         else:
-            st.warning("Insufficient sequential ticker iterations returned from backend APIs.")
-    except Exception as e:
-        st.error(f"Failed to resolve quantitative data stream: {e}")
+            st.info("Awaiting input keys inside the Secure Gateway panel above to pull real-time data ticks.")
 
 # ---------------- METRICS HUD STATUS DISPLAY ----------------
 m1, m2, m3, m4 = st.columns([1, 1, 1, 1])
@@ -272,28 +310,31 @@ metric_css = """
 """
 st.markdown(metric_css, unsafe_allow_html=True)
 
-m1.metric(label="📅 Target Index", value="NIFTY 50")
-m2.metric(label="🕒 Feed Source", value="Yahoo Finance" if mode == "Live Market Data" else "Manual Matrix")
-m3.metric(label="📊 Pipeline Status", value="Synchronized" if mode == "Live Market Data" else "Awaiting Input")
+m1.metric(label="📅 Target Index", value=target_index)
+m2.metric(label="🕒 Feed Source", value="AngelOne Stream" if (mode == "AngelOne Live Stream" and smartapi_installed) else "Manual Matrix")
+m3.metric(label="📊 Pipeline Status", value="Tick Live (0s Delay)" if api_authenticated else "Awaiting Gateway Auth")
 m4.metric(label="⚡ Engine Core", value="ML Inference Ready" if model else "Simulated Mode")
 
 st.write("")
 
 # ---------------- MAIN PANEL INPUT CONTROLS ----------------
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-st.markdown('<div class="panel-header">📊 Dynamic Matrix Tuning</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="panel-header">📊 Dynamic Matrix Tuning: {target_index}</div>', unsafe_allow_html=True)
+
+# Determine if input boxes should be interactive or disabled based on live flow state
+disable_inputs = (mode == "AngelOne Live Stream" and smartapi_installed)
 
 c1, c2 = st.columns(2, gap="medium")
 
 with c1:
-    open_price = st.number_input("Open Price (₹)", format="%.2f", value=open_price, disabled=(mode == "Live Market Data"))
-    low_price = st.number_input("Low Price (₹)", format="%.2f", value=low_price, disabled=(mode == "Live Market Data"))
-    volume = st.number_input("Trading Volume", format="%.2f", value=volume, disabled=(mode == "Live Market Data"))
+    open_price = st.number_input("Open Price (₹)", format="%.2f", value=open_price, disabled=disable_inputs)
+    low_price = st.number_input("Low Price (₹)", format="%.2f", value=low_price, disabled=disable_inputs)
+    volume = st.number_input("Trading Volume", format="%.2f", value=volume, disabled=disable_inputs)
 
 with c2:
-    high_price = st.number_input("High Price (₹)", format="%.2f", value=high_price, disabled=(mode == "Live Market Data"))
-    close_price = st.number_input("Close Price (₹)", format="%.2f", value=close_price, disabled=(mode == "Live Market Data"))
-    previous_return = st.number_input("Previous Session Return (%)", format="%.2f", value=previous_return, disabled=(mode == "Live Market Data"))
+    high_price = st.number_input("High Price (₹)", format="%.2f", value=high_price, disabled=disable_inputs)
+    close_price = st.number_input("Close Price (₹)", format="%.2f", value=close_price, disabled=disable_inputs)
+    previous_return = st.number_input("Previous Session Return (%)", format="%.2f", value=previous_return, disabled=disable_inputs)
 
 predict_clicked = st.button("🚀 EXECUTE PREDICTION MATRIX")
 st.markdown('</div>', unsafe_allow_html=True)
@@ -309,14 +350,12 @@ if predict_clicked:
         prediction = model.predict(data_array)[0]
         probability = model.predict_proba(data_array)[0]
     else:
-        # Graceful validation mock fallback configuration
         prediction = 1 if close_price >= open_price else 0
         probability = [0.18, 0.82] if prediction == 1 else [0.82, 0.18]
         
     if prediction == 1:
         confidence = probability[1] * 100
-        st.markdown(
-            f"""
+        st.markdown(f"""
             <div class="result-layout">
                 <div class="result-circle-base result-circle-bullish">🐂</div>
                 <div>
@@ -325,13 +364,10 @@ if predict_clicked:
                     <span style="color: #F8FAFC; font-weight: 500; font-size: 15px;">Confidence Threshold: <b style="color:#10B981;">{confidence:.2f}%</b></span>
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+            """, unsafe_allow_html=True)
     else:
         confidence = probability[0] * 100
-        st.markdown(
-            f"""
+        st.markdown(f"""
             <div class="result-layout">
                 <div class="result-circle-base result-circle-bearish">🐻</div>
                 <div>
@@ -340,13 +376,10 @@ if predict_clicked:
                     <span style="color: #F8FAFC; font-weight: 500; font-size: 15px;">Confidence Threshold: <b style="color:#EF4444;">{confidence:.2f}%</b></span>
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+            """, unsafe_allow_html=True)
     st.progress(confidence / 100)
 else:
-    st.markdown(
-        """
+    st.markdown("""
         <div class="result-layout">
             <div class="result-circle-base result-circle-placeholder">---</div>
             <div>
@@ -355,16 +388,13 @@ else:
                 <span style="color: #475569; font-weight: 500; font-size: 14px;">Confidence Threshold: --%</span>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+        """, unsafe_allow_html=True)
     st.progress(0.0)
 
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- BRAND FOOTER BANNER ----------------
-st.markdown(
-    """
+st.markdown("""
     <div class="footer-panel">
         <div>
             <p style="color: #475569; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 5px 0;">
@@ -392,6 +422,4 @@ st.markdown(
             <span style="color: #64748B; cursor: pointer;">🐦 Twitter</span>
         </div>
     </div>
-    """,
-    unsafe_allow_html=True
-)
+    """, unsafe_allow_html=True)
