@@ -5,7 +5,4 @@ scikit-learn
 joblib
 yfinance
 pillow
-smartapi-python
-pyotp
-requests
-urllib3
+
