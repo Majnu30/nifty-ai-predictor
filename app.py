@@ -205,42 +205,4 @@ if predict:
         f"Confidence: {confidence:.2f}%"
     )
 
-# ---------------- FOOTER ----------------
-st.markdown(
-    """
-    <div class="footer-card">
-
-        <h4 style="
-            color:#CBD5E1;
-            margin-bottom:15px;
-        ">
-            Designed by
-        </h4>
-
-        <h1 style="
-            font-size:70px;
-            margin:0;
-            background:linear-gradient(
-                90deg,
-                #3B82F6,
-                #A855F7
-            );
-            -webkit-background-clip:text;
-            -webkit-text-fill-color:transparent;
-            letter-spacing:8px;
-        ">
-            MAJNU
-        </h1>
-
-        <p style="
-            color:#94A3B8;
-            font-size:18px;
-            margin-top:15px;
-        ">
-            Code • Create • Conquer
-        </p>
-
-    </div>
-    """,
-    unsafe_allow_html=True
 )
