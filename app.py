@@ -237,24 +237,17 @@ st.markdown(
 st.markdown("<p style='color:#94A3B8; font-size:14px; font-weight:500; margin-bottom:8px;'>Data Intake Strategy</p>", unsafe_allow_html=True)
 mode = st.radio("Select Input Mode", ["Manual Input", "Live Market Data"], horizontal=True)
 
-# Initializing feature variables (6 core + 2 new technical indicators)
+# Initializing feature variables
 open_price, high_price, low_price, close_price, volume, previous_return = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-price_to_sma5, price_to_sma20 = 1.0, 1.0
 
 # ---------------- YAHOO FINANCE LIVE FEED FETCHING ----------------
 if mode == "Live Market Data":
     try:
         nifty = yf.Ticker("^NSEI")
-        # Fetch 30 days to calculate the 20-day Simple Moving Average accurately
-        df = nifty.history(period="30d")
+        # Fetch data to safely calculate the latest records
+        df = nifty.history(period="5d")
         
-        if len(df) >= 20:
-            # Calculate Indicators
-            df['SMA_5'] = df['Close'].rolling(window=5).mean()
-            df['SMA_20'] = df['Close'].rolling(window=20).mean()
-            df['Price_to_SMA5'] = df['Close'] / df['SMA_5']
-            df['Price_to_SMA20'] = df['Close'] / df['SMA_20']
-            
+        if len(df) >= 2:
             latest_row = df.iloc[-1]
             prior_close = df.iloc[-2]['Close']
             
@@ -264,9 +257,6 @@ if mode == "Live Market Data":
             close_price = float(latest_row['Close'])
             volume = float(latest_row['Volume'])
             previous_return = ((close_price - prior_close) / prior_close) * 100
-            
-            price_to_sma5 = float(latest_row['Price_to_SMA5'])
-            price_to_sma20 = float(latest_row['Price_to_SMA20'])
         else:
             st.warning("Insufficient sequential ticker iterations returned from backend APIs.")
     except Exception as e:
@@ -300,13 +290,11 @@ with c1:
     open_price = st.number_input("Open Price (₹)", format="%.2f", value=open_price, disabled=(mode == "Live Market Data"))
     low_price = st.number_input("Low Price (₹)", format="%.2f", value=low_price, disabled=(mode == "Live Market Data"))
     volume = st.number_input("Trading Volume", format="%.2f", value=volume, disabled=(mode == "Live Market Data"))
-    price_to_sma5 = st.number_input("Price to 5-Day SMA Ratio", format="%.4f", value=price_to_sma5, disabled=(mode == "Live Market Data"), help="Close Price divided by 5-day SMA")
 
 with c2:
     high_price = st.number_input("High Price (₹)", format="%.2f", value=high_price, disabled=(mode == "Live Market Data"))
     close_price = st.number_input("Close Price (₹)", format="%.2f", value=close_price, disabled=(mode == "Live Market Data"))
     previous_return = st.number_input("Previous Session Return (%)", format="%.2f", value=previous_return, disabled=(mode == "Live Market Data"))
-    price_to_sma20 = st.number_input("Price to 20-Day SMA Ratio", format="%.4f", value=price_to_sma20, disabled=(mode == "Live Market Data"), help="Close Price divided by 20-day SMA")
 
 predict_clicked = st.button("🚀 EXECUTE PREDICTION MATRIX")
 st.markdown('</div>', unsafe_allow_html=True)
@@ -316,17 +304,14 @@ st.markdown('<div class="content-panel">', unsafe_allow_html=True)
 st.markdown('<div class="panel-header">🎯 Inference Pipeline Output</div>', unsafe_allow_html=True)
 
 if predict_clicked:
-    # Array structure updated to pass all 8 engineered features in sequence
-    data_array = np.array([[
-        open_price, high_price, low_price, close_price, volume, 
-        previous_return, price_to_sma5, price_to_sma20
-    ]])
+    # EXACT layout of 6 features to perfectly match your current nifty_model.pkl
+    data_array = np.array([[open_price, high_price, low_price, close_price, volume, previous_return]])
     
     if model is not None:
         prediction = model.predict(data_array)[0]
         probability = model.predict_proba(data_array)[0]
     else:
-        # Graceful validation mock fallback configuration
+        # Graceful validation mock fallback configuration if model file isn't found
         prediction = 1 if close_price >= open_price else 0
         probability = [0.18, 0.82] if prediction == 1 else [0.82, 0.18]
         
