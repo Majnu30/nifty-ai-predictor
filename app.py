@@ -192,8 +192,7 @@ model = load_ml_model()
 
 # ---------------- SIDEBAR NAVIGATION ----------------
 with st.sidebar:
-    st.markdown(
-        """
+    st.markdown("""
         <div style="padding: 10px 0 25px 0;">
             <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 800; margin: 0; letter-spacing: 1px;">
                 M<span style="color: #3B82F6;">A</span>JNU
@@ -202,9 +201,7 @@ with st.sidebar:
                 Innovate • Build • Inspire
             </p>
         </div>
-        """, 
-        unsafe_allow_html=True
-    )
+        """, unsafe_allow_html=True)
     
     st.markdown("<p style='color:#475569; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;'>Navigation</p>", unsafe_allow_html=True)
     st.markdown("""
@@ -215,8 +212,7 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 # ---------------- HERO HEADER ----------------
-st.markdown(
-    """
+st.markdown("""
     <div class="responsive-header">
         <div>
             <h1 style="font-size: clamp(32px, 5vw, 48px); font-weight: 900; margin: 0; letter-spacing: -0.5px; line-height: 1.1;">
@@ -235,9 +231,7 @@ st.markdown(
             </span>
         </div>
     </div>
-    """, 
-    unsafe_allow_html=True
-)
+    """, unsafe_allow_html=True)
 
 # ---------------- INDEX SELECTION & DATA MODE ----------------
 st.markdown("<p style='color:#94A3B8; font-size:14px; font-weight:500; margin-bottom:4px;'>Target Market Index</p>", unsafe_allow_html=True)
@@ -262,11 +256,10 @@ if mode == "AngelOne Live Stream":
     with pw_col:
         PASSWORD = st.text_input("Mpin / Password", type="password")
     with to_col:
-        TOTP_SECRET = st.text_input("TOTP Token String", type="password", help="The secret key string displayed when scanning the QR code inside security setups")
+        TOTP_SECRET = st.text_input("TOTP Token String", type="password", help="The secret key string from standard safety apps")
         
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Trigger live authentication call only if keys are filled in by user
     if API_KEY and CLIENT_CODE and PASSWORD and TOTP_SECRET:
         try:
             smart_conn = SmartConnect(api_key=API_KEY)
@@ -276,7 +269,6 @@ if mode == "AngelOne Live Stream":
             if session_data.get('status'):
                 api_authenticated = True
                 
-                # Token maps for index quotes
                 token_map = {"NIFTY 50": "26000", "SENSEX": "1", "BANKEX": "12"}
                 exchange_map = {"NIFTY 50": "NSE", "SENSEX": "BSE", "BANKEX": "BSE"}
                 symbol_map = {"NIFTY 50": "Nifty 50", "SENSEX": "SENSEX", "BANKEX": "BANKEX"}
@@ -298,7 +290,7 @@ if mode == "AngelOne Live Stream":
                 else:
                     st.error(f"OHLC data request failed: {quote_response.get('message', 'Invalid response format')}")
             else:
-                st.error(f"Login Rejected: {session_data.get('message', 'Check client parameters or dynamic TOTP string length')}")
+                st.error(f"Login Rejected: {session_data.get('message', 'Check client parameters or TOTP configuration')}")
         except Exception as api_err:
             st.error(f"Failed to authenticate connection stream to AngelOne Gateway: {api_err}")
     else:
@@ -357,8 +349,7 @@ if predict_clicked:
         
     if prediction == 1:
         confidence = probability[1] * 100
-        st.markdown(
-            f"""
+        st.markdown(f"""
             <div class="result-layout">
                 <div class="result-circle-base result-circle-bullish">🐂</div>
                 <div>
@@ -367,13 +358,10 @@ if predict_clicked:
                     <span style="color: #F8FAFC; font-weight: 500; font-size: 15px;">Confidence Threshold: <b style="color:#10B981;">{confidence:.2f}%</b></span>
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+            """, unsafe_allow_html=True)
     else:
         confidence = probability[0] * 100
-        st.markdown(
-            f"""
+        st.markdown(f"""
             <div class="result-layout">
                 <div class="result-circle-base result-circle-bearish">🐻</div>
                 <div>
@@ -382,13 +370,10 @@ if predict_clicked:
                     <span style="color: #F8FAFC; font-weight: 500; font-size: 15px;">Confidence Threshold: <b style="color:#EF4444;">{confidence:.2f}%</b></span>
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+            """, unsafe_allow_html=True)
     st.progress(confidence / 100)
 else:
-    st.markdown(
-        """
+    st.markdown("""
         <div class="result-layout">
             <div class="result-circle-base result-circle-placeholder">---</div>
             <div>
@@ -397,16 +382,13 @@ else:
                 <span style="color: #475569; font-weight: 500; font-size: 14px;">Confidence Threshold: --%</span>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True
-    )
+        """, unsafe_allow_html=True)
     st.progress(0.0)
 
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- BRAND FOOTER BANNER ----------------
-st.markdown(
-    """
+st.markdown("""
     <div class="footer-panel">
         <div>
             <p style="color: #475569; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 5px 0;">
@@ -424,4 +406,4 @@ st.markdown(
             ">
                 MAJNU
             </h1>
-            <p style="color: #3B82F6; font-size: 13px; margin-top: 10
+            <p style="color:
