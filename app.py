@@ -2,9 +2,8 @@
 import streamlit as st
 import numpy as np
 import joblib
+model = joblib.load("nifty_model.pkl")
 
-model = joblib.load(
-    "models/nifty_model.pkl"
 )
 
 st.title(
