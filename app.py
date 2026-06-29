@@ -406,4 +406,14 @@ st.markdown("""
             ">
                 MAJNU
             </h1>
-            <p style="color:
+            <p style="color: #3B82F6; font-size: 13px; margin-top: 10px; font-weight: 500;">
+                Code. Create. Conquer.
+            </p>
+        </div>
+        <div style="display: flex; gap: 20px; align-items: center; justify-content: center; margin-top: 20px; opacity: 0.6; font-size: 14px;">
+            <span style="color: #64748B; cursor: pointer;">💻 GitHub</span>
+            <span style="color: #64748B; cursor: pointer;">🌐 LinkedIn</span>
+            <span style="color: #64748B; cursor: pointer;">🐦 Twitter</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
