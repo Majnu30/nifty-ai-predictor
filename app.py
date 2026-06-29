@@ -63,7 +63,7 @@ st.markdown("""
         font-size: 13px !important;
     }
 
-    div[data-testid="stNumberInput"] {
+    div[data-testid="stNumberInput"], div[data-testid="stSelectbox"] {
         background-color: #091122 !important;
         border-radius: 8px !important;
     }
@@ -221,10 +221,10 @@ st.markdown(
     <div class="responsive-header">
         <div>
             <h1 style="font-size: clamp(32px, 5vw, 48px); font-weight: 900; margin: 0; letter-spacing: -0.5px; line-height: 1.1;">
-                NIFTY <span style="color: #3B82F6;">AI</span> PREDICTOR
+                MARKET <span style="color: #3B82F6;">AI</span> PREDICTOR
             </h1>
             <p style="color: #64748B; font-size: clamp(14px, 2vw, 16px); margin-top: 10px; font-weight: 400; max-width: 600px;">
-                AI-Powered Quantitative Prediction Architecture for Next Trading Day Directional Bias & Intraday Options Filtering.
+                Multi-Index Quantitative Architecture for NIFTY, SENSEX, and BANKEX Options Matrix.
             </p>
         </div>
         <div style="background: rgba(30, 41, 59, 0.3); border: 1px solid #1E293B; padding: 15px 25px; border-radius: 12px; min-width: 160px; text-align: center;">
@@ -240,17 +240,28 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ---------------- DATA SOURCE SELECTION ----------------
-st.markdown("<p style='color:#94A3B8; font-size:14px; font-weight:500; margin-bottom:8px;'>Data Intake Strategy</p>", unsafe_allow_html=True)
+# ---------------- INDEX SELECTION & DATA MODE ----------------
+st.markdown("<p style='color:#94A3B8; font-size:14px; font-weight:500; margin-bottom:4px;'>Target Market Index</p>", unsafe_allow_html=True)
+target_index = st.selectbox("Select Index", ["NIFTY 50", "SENSEX", "BANKEX"], label_visibility="collapsed")
+
+# Map human readable index to Yahoo Finance Tickers
+ticker_mapping = {
+    "NIFTY 50": "^NSEI",
+    "SENSEX": "^BSESN",
+    "BANKEX": "^BSEBK"
+}
+selected_ticker = ticker_mapping[target_index]
+
+st.markdown("<p style='color:#94A3B8; font-size:14px; font-weight:500; margin-top:12px; margin-bottom:4px;'>Data Intake Strategy</p>", unsafe_allow_html=True)
 mode = st.radio("Select Input Mode", ["Manual Input", "Live Market Data"], horizontal=True)
 
 open_price, high_price, low_price, close_price, volume, previous_return = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
-# ---------------- YAHOO FINANCE LIVE FEED FETCHING ----------------
+# ---------------- YAHOO FINANCE MULTI-INDEX LIVE FETCHING ----------------
 if mode == "Live Market Data":
     try:
-        nifty = yf.Ticker("^NSEI")
-        df = nifty.history(period="5d")
+        ticker_obj = yf.Ticker(selected_ticker)
+        df = ticker_obj.history(period="5d")
         
         if len(df) >= 2:
             latest_row = df.iloc[-1]
@@ -263,9 +274,9 @@ if mode == "Live Market Data":
             volume = float(latest_row['Volume'])
             previous_return = ((close_price - prior_close) / prior_close) * 100
         else:
-            st.warning("Insufficient sequential ticker iterations returned from backend APIs.")
+            st.warning(f"Insufficient sequential ticker iterations returned for {target_index}.")
     except Exception as e:
-        st.error(f"Failed to resolve quantitative data stream: {e}")
+        st.error(f"Failed to resolve quantitative data stream for {target_index}: {e}")
 
 # ---------------- METRICS HUD STATUS DISPLAY ----------------
 m1, m2, m3, m4 = st.columns([1, 1, 1, 1])
@@ -278,7 +289,7 @@ metric_css = """
 """
 st.markdown(metric_css, unsafe_allow_html=True)
 
-m1.metric(label="📅 Target Index", value="NIFTY 50")
+m1.metric(label="📅 Target Index", value=target_index)
 m2.metric(label="🕒 Feed Source", value="Yahoo Finance" if mode == "Live Market Data" else "Manual Matrix")
 m3.metric(label="📊 Pipeline Status", value="Synchronized" if mode == "Live Market Data" else "Awaiting Input")
 m4.metric(label="⚡ Engine Core", value="ML Inference Ready" if model else "Simulated Mode")
@@ -287,7 +298,7 @@ st.write("")
 
 # ---------------- MAIN PANEL INPUT CONTROLS ----------------
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-st.markdown('<div class="panel-header">📊 Dynamic Matrix Tuning</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="panel-header">📊 Dynamic Matrix Tuning: {target_index}</div>', unsafe_allow_html=True)
 
 c1, c2 = st.columns(2, gap="medium")
 
@@ -311,6 +322,7 @@ st.markdown('<div class="panel-header">🎯 Inference Pipeline Output</div>', un
 if predict_clicked:
     data_array = np.array([[open_price, high_price, low_price, close_price, volume, previous_return]])
     
+    # Using your 6-feature trained random forest architecture
     if model is not None:
         prediction = model.predict(data_array)[0]
         probability = model.predict_proba(data_array)[0]
@@ -353,16 +365,16 @@ if predict_clicked:
 
     # ---------------- DYNAMIC OPTION CHAIN SCREENING ----------------
     st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="panel-header">⚡ Recommended Intraday Option Contracts</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="panel-header">⚡ Recommended Intraday Option Contracts ({target_index})</div>', unsafe_allow_html=True)
     
-    with st.spinner("Analyzing current weekly options chain..."):
+    with st.spinner(f"Analyzing weekly {target_index} options chain..."):
         try:
-            nifty = yf.Ticker("^NSEI")
-            expirations = nifty.options
+            ticker_obj = yf.Ticker(selected_ticker)
+            expirations = ticker_obj.options
             
             if expirations:
                 next_expiry = expirations[0] 
-                opt_chain = nifty.option_chain(next_expiry)
+                opt_chain = ticker_obj.option_chain(next_expiry)
                 
                 if prediction == 1:
                     st.write(f"Showing near-the-money **Call Options (CE)** expiring on **{next_expiry}**:")
@@ -372,13 +384,17 @@ if predict_clicked:
                     df_opts = opt_chain.puts
                 
                 spot_price = close_price if close_price > 0 else open_price
-                if spot_price == 0:
-                    spot_price = 24000.0
-                    
-                filtered_opts = df_opts[
-                    (df_opts['strike'] >= spot_price - 250) & 
-                    (df_opts['strike'] <= spot_price + 250)
-                ].copy()
+                
+                # Dynamic range scaling (SENSEX points are larger than NIFTY, filter out +/- 500 points)
+                range_window = 500 if "SENSEX" in target_index or "BANKEX" in target_index else 250
+                
+                if spot_price > 0:
+                    filtered_opts = df_opts[
+                        (df_opts['strike'] >= spot_price - range_window) & 
+                        (df_opts['strike'] <= spot_price + range_window)
+                    ].copy()
+                else:
+                    filtered_opts = df_opts.head(10)
                 
                 display_cols = {
                     'contractSymbol': 'Contract Symbol',
@@ -390,16 +406,18 @@ if predict_clicked:
                     'openInterest': 'Open Interest (OI)'
                 }
                 
-                filtered_opts = filtered_opts[list(display_cols.keys())].rename(columns=display_cols)
+                # Safely slice available headers
+                available_cols = [col for col in display_cols.keys() if col in filtered_opts.columns]
+                filtered_opts = filtered_opts[available_cols].rename(columns={c: display_cols[c] for c in available_cols})
                 
                 if not filtered_opts.empty:
                     st.dataframe(filtered_opts.reset_index(drop=True), use_container_width=True)
                 else:
-                    st.info("No active contracts found within the selected target range.")
+                    st.info(f"No active intraday contracts listed in public chains for {target_index} at this boundary.")
             else:
-                st.warning("Unable to fetch option chain dates at this moment.")
+                st.warning(f"Public options chains for ticker '{selected_ticker}' are currently not listing weekly expiries.")
         except Exception as opt_err:
-            st.error(f"Options engine calculation timeout: {opt_err}")
+            st.error(f"Options database connectivity timeout: {opt_err}")
     st.markdown('</div>', unsafe_allow_html=True)
 
 else:
