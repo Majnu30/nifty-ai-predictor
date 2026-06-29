@@ -1,9 +1,7 @@
 streamlit
-pandas
 numpy
-scikit-learn
 joblib
-yfinance
-pillow
+pandas
+scikit-learn==1.6.1
 smartapi-python
 pyotp
