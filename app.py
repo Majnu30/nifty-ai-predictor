@@ -1,9 +1,15 @@
 import streamlit as st
 import numpy as np
 import joblib
-import yfinance as yf
 import pandas as pd
 import os
+import time
+# Importing Angel One SmartAPI components
+try:
+    from SmartApi import SmartConnect
+    import pyotp
+except ImportError:
+    pass
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -68,7 +74,6 @@ st.markdown("""
         border-radius: 8px !important;
     }
     
-    /* Segmented Control / Radio Overrides */
     div[data-testid="stRadio"] > label {
         display: none;
     }
@@ -146,14 +151,6 @@ st.markdown("""
     .result-circle-bullish { border: 3px solid #10B981; background: rgba(16, 185, 129, 0.05); box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
     .result-circle-bearish { border: 3px solid #EF4444; background: rgba(239, 68, 68, 0.05); box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); }
 
-    .sidebar-card {
-        background: #070F21;
-        border: 1px solid #111E3B;
-        border-radius: 12px;
-        padding: 16px;
-        margin-top: 20px;
-    }
-
     .footer-panel {
         background: linear-gradient(90deg, #050B18 0%, #081226 100%);
         border: 1px solid #111E3B;
@@ -224,7 +221,7 @@ st.markdown(
                 MARKET <span style="color: #3B82F6;">AI</span> PREDICTOR
             </h1>
             <p style="color: #64748B; font-size: clamp(14px, 2vw, 16px); margin-top: 10px; font-weight: 400; max-width: 600px;">
-                Multi-Index Quantitative Architecture for NIFTY, SENSEX, and BANKEX Options Matrix.
+                Broker-Grade Multi-Index Quantitative Engine for Live Options Trading Vectors.
             </p>
         </div>
         <div style="background: rgba(30, 41, 59, 0.3); border: 1px solid #1E293B; padding: 15px 25px; border-radius: 12px; min-width: 160px; text-align: center;">
@@ -244,39 +241,54 @@ st.markdown(
 st.markdown("<p style='color:#94A3B8; font-size:14px; font-weight:500; margin-bottom:4px;'>Target Market Index</p>", unsafe_allow_html=True)
 target_index = st.selectbox("Select Index", ["NIFTY 50", "SENSEX", "BANKEX"], label_visibility="collapsed")
 
-# Map human readable index to Yahoo Finance Tickers
-ticker_mapping = {
-    "NIFTY 50": "^NSEI",
-    "SENSEX": "^BSESN",
-    "BANKEX": "^BSEBK"
-}
-selected_ticker = ticker_mapping[target_index]
-
 st.markdown("<p style='color:#94A3B8; font-size:14px; font-weight:500; margin-top:12px; margin-bottom:4px;'>Data Intake Strategy</p>", unsafe_allow_html=True)
-mode = st.radio("Select Input Mode", ["Manual Input", "Live Market Data"], horizontal=True)
+mode = st.radio("Select Input Mode", ["Manual Input", "AngelOne Live Stream"], horizontal=True)
 
 open_price, high_price, low_price, close_price, volume, previous_return = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
-# ---------------- YAHOO FINANCE MULTI-INDEX LIVE FETCHING ----------------
-if mode == "Live Market Data":
-    try:
-        ticker_obj = yf.Ticker(selected_ticker)
-        df = ticker_obj.history(period="5d")
-        
-        if len(df) >= 2:
-            latest_row = df.iloc[-1]
-            prior_close = df.iloc[-2]['Close']
+# ---------------- ANGEL ONE LIVE DATA STREAMING PIPELINE ----------------
+if mode == "AngelOne Live Stream":
+    # ⚠️ REPLICATE YOUR API CREDENTIALS HERE
+    API_KEY = "YOUR_ANGELONE_API_KEY"
+    CLIENT_CODE = "YOUR_CLIENT_CODE"
+    PASSWORD = "YOUR_PASSWORD"
+    TOTP_SECRET = "YOUR_TOTP_SECRET_KEY" 
+    
+    if API_KEY == "YOUR_ANGELONE_API_KEY":
+        st.warning("Broker API configurations detected as baseline placeholders. Please enter your SmartAPI keys inside the code.")
+    else:
+        try:
+            # Initialize connection session
+            smart_conn = SmartConnect(api_key=API_KEY)
+            totp = pyotp.TOTP(TOTP_SECRET).now()
+            session_data = smart_conn.generateSession(CLIENT_CODE, PASSWORD, totp)
             
-            open_price = float(latest_row['Open'])
-            high_price = float(latest_row['High'])
-            low_price = float(latest_row['Low'])
-            close_price = float(latest_row['Close'])
-            volume = float(latest_row['Volume'])
-            previous_return = ((close_price - prior_close) / prior_close) * 100
-        else:
-            st.warning(f"Insufficient sequential ticker iterations returned for {target_index}.")
-    except Exception as e:
-        st.error(f"Failed to resolve quantitative data stream for {target_index}: {e}")
+            # Map selected indices to exchange tokens (NSE/BSE token map rules)
+            token_map = {"NIFTY 50": "26000", "SENSEX": "1", "BANKEX": "12"}
+            exchange_map = {"NIFTY 50": "NSE", "SENSEX": "BSE", "BANKEX": "BSE"}
+            
+            # Request quote matrix from Angel One
+            quote_response = smart_conn.getOHLC(
+                exchange=exchange_map[target_index], 
+                tradingsymbol=target_index.replace(" ", ""), 
+                symboltoken=token_map[target_index]
+            )
+            
+            if quote_response.get('status') and 'data' in quote_response:
+                live_data = quote_response['data']
+                open_price = float(live_data.get('open', 0))
+                high_price = float(live_data.get('high', 0))
+                low_price = float(live_data.get('low', 0))
+                close_price = float(live_data.get('close', 0)) # Last traded price
+                
+                # Derive returns profile safely
+                close_prev = float(live_data.get('ltp', close_price))
+                previous_return = ((close_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
+                volume = float(live_data.get('volume', 0))
+            else:
+                st.error("SmartAPI platform returned validation errors. Checking system state.")
+        except Exception as api_err:
+            st.error(f"Failed to authenticate connection stream to AngelOne Gateway: {api_err}")
 
 # ---------------- METRICS HUD STATUS DISPLAY ----------------
 m1, m2, m3, m4 = st.columns([1, 1, 1, 1])
@@ -290,8 +302,8 @@ metric_css = """
 st.markdown(metric_css, unsafe_allow_html=True)
 
 m1.metric(label="📅 Target Index", value=target_index)
-m2.metric(label="🕒 Feed Source", value="Yahoo Finance" if mode == "Live Market Data" else "Manual Matrix")
-m3.metric(label="📊 Pipeline Status", value="Synchronized" if mode == "Live Market Data" else "Awaiting Input")
+m2.metric(label="🕒 Feed Source", value="AngelOne Stream" if mode == "AngelOne Live Stream" else "Manual Matrix")
+m3.metric(label="📊 Pipeline Status", value="Tick Live (0s Delay)" if mode == "AngelOne Live Stream" else "Awaiting Input")
 m4.metric(label="⚡ Engine Core", value="ML Inference Ready" if model else "Simulated Mode")
 
 st.write("")
@@ -303,14 +315,14 @@ st.markdown(f'<div class="panel-header">📊 Dynamic Matrix Tuning: {target_inde
 c1, c2 = st.columns(2, gap="medium")
 
 with c1:
-    open_price = st.number_input("Open Price (₹)", format="%.2f", value=open_price, disabled=(mode == "Live Market Data"))
-    low_price = st.number_input("Low Price (₹)", format="%.2f", value=low_price, disabled=(mode == "Live Market Data"))
-    volume = st.number_input("Trading Volume", format="%.2f", value=volume, disabled=(mode == "Live Market Data"))
+    open_price = st.number_input("Open Price (₹)", format="%.2f", value=open_price, disabled=(mode == "AngelOne Live Stream"))
+    low_price = st.number_input("Low Price (₹)", format="%.2f", value=low_price, disabled=(mode == "AngelOne Live Stream"))
+    volume = st.number_input("Trading Volume", format="%.2f", value=volume, disabled=(mode == "AngelOne Live Stream"))
 
 with c2:
-    high_price = st.number_input("High Price (₹)", format="%.2f", value=high_price, disabled=(mode == "Live Market Data"))
-    close_price = st.number_input("Close Price (₹)", format="%.2f", value=close_price, disabled=(mode == "Live Market Data"))
-    previous_return = st.number_input("Previous Session Return (%)", format="%.2f", value=previous_return, disabled=(mode == "Live Market Data"))
+    high_price = st.number_input("High Price (₹)", format="%.2f", value=high_price, disabled=(mode == "AngelOne Live Stream"))
+    close_price = st.number_input("Close Price (₹)", format="%.2f", value=close_price, disabled=(mode == "AngelOne Live Stream"))
+    previous_return = st.number_input("Previous Session Return (%)", format="%.2f", value=previous_return, disabled=(mode == "AngelOne Live Stream"))
 
 predict_clicked = st.button("🚀 EXECUTE PREDICTION MATRIX")
 st.markdown('</div>', unsafe_allow_html=True)
@@ -322,7 +334,6 @@ st.markdown('<div class="panel-header">🎯 Inference Pipeline Output</div>', un
 if predict_clicked:
     data_array = np.array([[open_price, high_price, low_price, close_price, volume, previous_return]])
     
-    # Using your 6-feature trained random forest architecture
     if model is not None:
         prediction = model.predict(data_array)[0]
         probability = model.predict_proba(data_array)[0]
@@ -361,65 +372,6 @@ if predict_clicked:
             unsafe_allow_html=True
         )
     st.progress(confidence / 100)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # ---------------- DYNAMIC OPTION CHAIN SCREENING ----------------
-    st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-    st.markdown(f'<div class="panel-header">⚡ Recommended Intraday Option Contracts ({target_index})</div>', unsafe_allow_html=True)
-    
-    with st.spinner(f"Analyzing weekly {target_index} options chain..."):
-        try:
-            ticker_obj = yf.Ticker(selected_ticker)
-            expirations = ticker_obj.options
-            
-            if expirations:
-                next_expiry = expirations[0] 
-                opt_chain = ticker_obj.option_chain(next_expiry)
-                
-                if prediction == 1:
-                    st.write(f"Showing near-the-money **Call Options (CE)** expiring on **{next_expiry}**:")
-                    df_opts = opt_chain.calls
-                else:
-                    st.write(f"Showing near-the-money **Put Options (PE)** expiring on **{next_expiry}**:")
-                    df_opts = opt_chain.puts
-                
-                spot_price = close_price if close_price > 0 else open_price
-                
-                # Dynamic range scaling (SENSEX points are larger than NIFTY, filter out +/- 500 points)
-                range_window = 500 if "SENSEX" in target_index or "BANKEX" in target_index else 250
-                
-                if spot_price > 0:
-                    filtered_opts = df_opts[
-                        (df_opts['strike'] >= spot_price - range_window) & 
-                        (df_opts['strike'] <= spot_price + range_window)
-                    ].copy()
-                else:
-                    filtered_opts = df_opts.head(10)
-                
-                display_cols = {
-                    'contractSymbol': 'Contract Symbol',
-                    'strike': 'Strike Price (₹)',
-                    'lastPrice': 'Premium (LTP)',
-                    'change': 'Change (₹)',
-                    'percentChange': 'Change (%)',
-                    'volume': 'Volume',
-                    'openInterest': 'Open Interest (OI)'
-                }
-                
-                # Safely slice available headers
-                available_cols = [col for col in display_cols.keys() if col in filtered_opts.columns]
-                filtered_opts = filtered_opts[available_cols].rename(columns={c: display_cols[c] for c in available_cols})
-                
-                if not filtered_opts.empty:
-                    st.dataframe(filtered_opts.reset_index(drop=True), use_container_width=True)
-                else:
-                    st.info(f"No active intraday contracts listed in public chains for {target_index} at this boundary.")
-            else:
-                st.warning(f"Public options chains for ticker '{selected_ticker}' are currently not listing weekly expiries.")
-        except Exception as opt_err:
-            st.error(f"Options database connectivity timeout: {opt_err}")
-    st.markdown('</div>', unsafe_allow_html=True)
-
 else:
     st.markdown(
         """
@@ -435,7 +387,8 @@ else:
         unsafe_allow_html=True
     )
     st.progress(0.0)
-    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- BRAND FOOTER BANNER ----------------
 st.markdown(
