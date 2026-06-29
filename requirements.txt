@@ -3,5 +3,5 @@ numpy
 joblib
 pandas
 scikit-learn==1.6.1
-smartapi-python
 pyotp
+requests
