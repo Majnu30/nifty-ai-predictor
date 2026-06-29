@@ -2,117 +2,130 @@ import streamlit as st
 import numpy as np
 import joblib
 
+# ---------------- PAGE CONFIG ----------------
 st.set_page_config(
     page_title="NIFTY AI Predictor",
     page_icon="📈",
     layout="wide"
 )
 
+# ---------------- LOAD MODEL ----------------
 model = joblib.load("nifty_model.pkl")
 
-# ---------- CSS ----------
+# ---------------- CSS ----------------
 st.markdown("""
 <style>
 
 .stApp {
-    background-color: #0B1120;
-}
-
-.main-title {
-    font-size: 55px;
-    font-weight: 700;
+    background-color: #050A18;
     color: white;
-    margin-bottom: 0px;
-}
-
-.subtitle {
-    color: #94A3B8;
-    font-size: 18px;
-}
-
-.card {
-    background: #111827;
-    padding: 25px;
-    border-radius: 20px;
-    border: 1px solid #1E293B;
-}
-
-.metric-card {
-    background: #111827;
-    padding: 20px;
-    border-radius: 20px;
-    text-align: center;
-    border: 1px solid #1E293B;
-}
-
-div.stButton > button {
-    width: 100%;
-    height: 60px;
-    border-radius: 15px;
-    border: none;
-    background: linear-gradient(
-        90deg,
-        #2563EB,
-        #7C3AED
-    );
-    color: white;
-    font-size: 20px;
-    font-weight: bold;
 }
 
 .block-container {
     padding-top: 2rem;
 }
 
+div[data-testid="stMetric"] {
+    background-color: #111827;
+    border: 1px solid #1E293B;
+    padding: 20px;
+    border-radius: 18px;
+}
+
+div.stButton > button {
+    width: 100%;
+    height: 65px;
+    border-radius: 15px;
+    border: none;
+    color: white;
+    font-size: 22px;
+    font-weight: bold;
+    background: linear-gradient(
+        90deg,
+        #2563EB,
+        #9333EA
+    );
+}
+
+.footer-card {
+    background: #111827;
+    border: 1px solid #1E293B;
+    border-radius: 25px;
+    padding: 40px;
+    margin-top: 50px;
+    text-align: center;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
-# ---------- HEADER ----------
+# ---------------- HEADER ----------------
 left, right = st.columns([2, 1])
 
 with left:
     st.markdown(
-        "<div class='main-title'>NIFTY AI Predictor</div>",
+        """
+        <h1 style='font-size:60px; margin-bottom:0;'>
+            NIFTY
+            <span style='color:#3B82F6;'>
+            AI
+            </span>
+            <br>
+            PREDICTOR
+        </h1>
+        """,
         unsafe_allow_html=True
     )
 
     st.markdown(
-        "<div class='subtitle'>AI-powered prediction of the next trading day's market direction</div>",
+        """
+        <p style='color:#94A3B8; font-size:20px;'>
+        AI-powered prediction for next day market direction
+        </p>
+        """,
         unsafe_allow_html=True
     )
 
 with right:
-    st.markdown("""
-    <div class='card' style='text-align:center'>
-        <h1 style='font-size:70px'>📈</h1>
-        <h4 style='color:#60A5FA'>
-        Bull vs Bear Market
-        </h4>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div style="
+            background:#111827;
+            border-radius:20px;
+            padding:35px;
+            text-align:center;
+            border:1px solid #1E293B;
+        ">
+            <h1 style='font-size:80px;'>📈</h1>
+            <h3 style='color:#60A5FA;'>
+                Bull vs Bear Market
+            </h3>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 st.write("")
 
-# ---------- METRICS ----------
-m1, m2, m3, m4 = st.columns(4)
+# ---------------- METRICS ----------------
+c1, c2, c3, c4 = st.columns(4)
 
-with m1:
-    st.metric("Market", "NIFTY 50")
+with c1:
+    st.metric("📅 Market", "NIFTY 50")
 
-with m2:
-    st.metric("Model", "Random Forest")
+with c2:
+    st.metric("🕒 Updated", "Live")
 
-with m3:
-    st.metric("Status", "Ready")
+with c3:
+    st.metric("📊 Status", "Ready")
 
-with m4:
-    st.metric("Accuracy", "87.4%")
+with c4:
+    st.metric("🤖 Model", "AI Enabled")
 
 st.write("")
+st.subheader("📈 Market Inputs")
 
-# ---------- INPUT SECTION ----------
-st.markdown("## Market Inputs")
-
+# ---------------- INPUTS ----------------
 c1, c2 = st.columns(2)
 
 with c1:
@@ -149,11 +162,12 @@ with c2:
 
 st.write("")
 
+# ---------------- PREDICT BUTTON ----------------
 predict = st.button(
-    "🚀 Predict Tomorrow"
+    "🚀 PREDICT TOMORROW"
 )
 
-# ---------- PREDICTION ----------
+# ---------------- PREDICTION ----------------
 if predict:
 
     data = np.array([[
@@ -169,44 +183,63 @@ if predict:
     probability = model.predict_proba(data)[0]
 
     st.write("")
+    st.subheader("🎯 Prediction Result")
 
     if prediction == 1:
         confidence = probability[1] * 100
 
         st.success(
-            f"📈 Prediction: BULLISH\n\nConfidence: {confidence:.2f}%"
+            f"📈 Market Direction: BULLISH"
         )
 
     else:
         confidence = probability[0] * 100
 
         st.error(
-            f"📉 Prediction: BEARISH\n\nConfidence: {confidence:.2f}%"
+            f"📉 Market Direction: BEARISH"
         )
 
     st.progress(confidence / 100)
 
-# ---------- FOOTER ----------
-st.write("")
-st.divider()
+    st.write(
+        f"Confidence: {confidence:.2f}%"
+    )
 
+# ---------------- FOOTER ----------------
 st.markdown(
     """
-    <div style='text-align:center'>
-        <h4 style='color:#94A3B8'>
-        Designed by
+    <div class="footer-card">
+
+        <h4 style="
+            color:#CBD5E1;
+            margin-bottom:15px;
+        ">
+            Designed by
         </h4>
 
-        <h1 style='
-        color:#60A5FA;
-        font-size:45px;
-        margin-top:-10px;'>
-        MAJNU
+        <h1 style="
+            font-size:70px;
+            margin:0;
+            background:linear-gradient(
+                90deg,
+                #3B82F6,
+                #A855F7
+            );
+            -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;
+            letter-spacing:8px;
+        ">
+            MAJNU
         </h1>
 
-        <p style='color:#64748B'>
-        AI • Finance • Innovation
+        <p style="
+            color:#94A3B8;
+            font-size:18px;
+            margin-top:15px;
+        ">
+            Code • Create • Conquer
         </p>
+
     </div>
     """,
     unsafe_allow_html=True
