@@ -4,12 +4,13 @@ import joblib
 import pandas as pd
 import os
 import time
-# Importing Angel One SmartAPI components
+
+# Safely import Angel One SmartAPI libraries
 try:
     from SmartApi import SmartConnect
     import pyotp
 except ImportError:
-    pass
+    st.error("Missing broker SDK dependencies. Run: pip install smartapi-python pyotp")
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -69,8 +70,9 @@ st.markdown("""
         font-size: 13px !important;
     }
 
-    div[data-testid="stNumberInput"], div[data-testid="stSelectbox"] {
+    div[data-testid="stNumberInput"], div[data-testid="stSelectbox"], div[data-testid="stTextInput"] input {
         background-color: #091122 !important;
+        color: #F8FAFC !important;
         border-radius: 8px !important;
     }
     
@@ -245,50 +247,62 @@ st.markdown("<p style='color:#94A3B8; font-size:14px; font-weight:500; margin-to
 mode = st.radio("Select Input Mode", ["Manual Input", "AngelOne Live Stream"], horizontal=True)
 
 open_price, high_price, low_price, close_price, volume, previous_return = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+api_authenticated = False
 
-# ---------------- ANGEL ONE LIVE DATA STREAMING PIPELINE ----------------
+# ---------------- ANGEL ONE CONFIGURATION ENTRY ----------------
 if mode == "AngelOne Live Stream":
-    # ⚠️ REPLICATE YOUR API CREDENTIALS HERE
-    API_KEY = "YOUR_ANGELONE_API_KEY"
-    CLIENT_CODE = "YOUR_CLIENT_CODE"
-    PASSWORD = "YOUR_PASSWORD"
-    TOTP_SECRET = "YOUR_TOTP_SECRET_KEY" 
+    st.markdown('<div class="content-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="panel-header">🔐 Secure SmartAPI Gateway Terminal</div>', unsafe_allow_html=True)
     
-    if API_KEY == "YOUR_ANGELONE_API_KEY":
-        st.warning("Broker API configurations detected as baseline placeholders. Please enter your SmartAPI keys inside the code.")
-    else:
+    ak_col, cc_col, pw_col, to_col = st.columns(4)
+    with ak_col:
+        API_KEY = st.text_input("SmartAPI Key", type="password", help="Get this from your SmartAPI developer profile panel")
+    with cc_col:
+        CLIENT_CODE = st.text_input("Client ID / Code", help="Your Angel One login User ID")
+    with pw_col:
+        PASSWORD = st.text_input("Mpin / Password", type="password")
+    with to_col:
+        TOTP_SECRET = st.text_input("TOTP Token String", type="password", help="The secret key string displayed when scanning the QR code inside security setups")
+        
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Trigger live authentication call only if keys are filled in by user
+    if API_KEY and CLIENT_CODE and PASSWORD and TOTP_SECRET:
         try:
-            # Initialize connection session
             smart_conn = SmartConnect(api_key=API_KEY)
             totp = pyotp.TOTP(TOTP_SECRET).now()
             session_data = smart_conn.generateSession(CLIENT_CODE, PASSWORD, totp)
             
-            # Map selected indices to exchange tokens (NSE/BSE token map rules)
-            token_map = {"NIFTY 50": "26000", "SENSEX": "1", "BANKEX": "12"}
-            exchange_map = {"NIFTY 50": "NSE", "SENSEX": "BSE", "BANKEX": "BSE"}
-            
-            # Request quote matrix from Angel One
-            quote_response = smart_conn.getOHLC(
-                exchange=exchange_map[target_index], 
-                tradingsymbol=target_index.replace(" ", ""), 
-                symboltoken=token_map[target_index]
-            )
-            
-            if quote_response.get('status') and 'data' in quote_response:
-                live_data = quote_response['data']
-                open_price = float(live_data.get('open', 0))
-                high_price = float(live_data.get('high', 0))
-                low_price = float(live_data.get('low', 0))
-                close_price = float(live_data.get('close', 0)) # Last traded price
+            if session_data.get('status'):
+                api_authenticated = True
                 
-                # Derive returns profile safely
-                close_prev = float(live_data.get('ltp', close_price))
-                previous_return = ((close_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
-                volume = float(live_data.get('volume', 0))
+                # Token maps for index quotes
+                token_map = {"NIFTY 50": "26000", "SENSEX": "1", "BANKEX": "12"}
+                exchange_map = {"NIFTY 50": "NSE", "SENSEX": "BSE", "BANKEX": "BSE"}
+                symbol_map = {"NIFTY 50": "Nifty 50", "SENSEX": "SENSEX", "BANKEX": "BANKEX"}
+                
+                quote_response = smart_conn.getOHLC(
+                    exchange=exchange_map[target_index], 
+                    tradingsymbol=symbol_map[target_index], 
+                    symboltoken=token_map[target_index]
+                )
+                
+                if quote_response.get('status') and 'data' in quote_response:
+                    live_data = quote_response['data']
+                    open_price = float(live_data.get('open', 0))
+                    high_price = float(live_data.get('high', 0))
+                    low_price = float(live_data.get('low', 0))
+                    close_price = float(live_data.get('close', 0))
+                    volume = float(live_data.get('volume', 0))
+                    previous_return = ((close_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
+                else:
+                    st.error(f"OHLC data request failed: {quote_response.get('message', 'Invalid response format')}")
             else:
-                st.error("SmartAPI platform returned validation errors. Checking system state.")
+                st.error(f"Login Rejected: {session_data.get('message', 'Check client parameters or dynamic TOTP string length')}")
         except Exception as api_err:
             st.error(f"Failed to authenticate connection stream to AngelOne Gateway: {api_err}")
+    else:
+        st.info("Awaiting input keys inside the Secure Gateway panel above to pull real-time data ticks.")
 
 # ---------------- METRICS HUD STATUS DISPLAY ----------------
 m1, m2, m3, m4 = st.columns([1, 1, 1, 1])
@@ -303,7 +317,7 @@ st.markdown(metric_css, unsafe_allow_html=True)
 
 m1.metric(label="📅 Target Index", value=target_index)
 m2.metric(label="🕒 Feed Source", value="AngelOne Stream" if mode == "AngelOne Live Stream" else "Manual Matrix")
-m3.metric(label="📊 Pipeline Status", value="Tick Live (0s Delay)" if mode == "AngelOne Live Stream" else "Awaiting Input")
+m3.metric(label="📊 Pipeline Status", value="Tick Live (0s Delay)" if api_authenticated else "Awaiting Gateway Auth")
 m4.metric(label="⚡ Engine Core", value="ML Inference Ready" if model else "Simulated Mode")
 
 st.write("")
@@ -410,16 +424,4 @@ st.markdown(
             ">
                 MAJNU
             </h1>
-            <p style="color: #3B82F6; font-size: 13px; margin-top: 10px; font-weight: 500;">
-                Code. Create. Conquer.
-            </p>
-        </div>
-        <div style="display: flex; gap: 20px; align-items: center; justify-content: center; margin-top: 20px; opacity: 0.6; font-size: 14px;">
-            <span style="color: #64748B; cursor: pointer;">💻 GitHub</span>
-            <span style="color: #64748B; cursor: pointer;">🌐 LinkedIn</span>
-            <span style="color: #64748B; cursor: pointer;">🐦 Twitter</span>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+            <p style="color: #3B82F6; font-size: 13px; margin-top: 10
