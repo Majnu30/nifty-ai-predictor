@@ -14,31 +14,43 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ---------------- DYNAMIC SELECTION SYNC ----------------
-def on_index_change():
+# ---------------- DYNAMIC VALUE RE-ALIGNMENT CONFIG ----------------
+def reset_index_baselines():
     selected = st.session_state.index_selector
     if selected == "SENSEX":
-        st.session_state.current_price = 77100.0
+        st.session_state.current_price = 76700.0
+        st.session_state.baseline_open = 77000.0
     elif selected == "BANKEX":
-        st.session_state.current_price = 58100.0
-    else:
-        st.session_state.current_price = 23550.0
+        st.session_state.current_price = 65500.0
+        st.session_state.baseline_open = 65600.0
+    else: # NIFTY 50 Default
+        st.session_state.current_price = 24050.0
+        st.session_state.baseline_open = 24060.0
 
 # ---------------- INITIALIZE PERSISTENT STORAGE ----------------
 if "smart_api" not in st.session_state: st.session_state.smart_api = None
 if "api_authenticated" not in st.session_state: st.session_state.api_authenticated = False
 if "refresh_counter" not in st.session_state: st.session_state.refresh_counter = 0
-if "current_price" not in st.session_state: st.session_state.current_price = 23550.0
+
+if "current_price" not in st.session_state: st.session_state.current_price = 24050.0
+if "baseline_open" not in st.session_state: st.session_state.baseline_open = 24060.0
 
 # ---------------- THEME CSS ----------------
 st.markdown("""
 <style>
     .stApp { background-color: #030712 !important; color: #F8FAFC !important; }
     .content-panel { background: #070F21; border: 1px solid #111E3B; border-radius: 16px; padding: 30px; margin-bottom: 20px; }
-    .panel-header { font-size: 18px; font-weight: 600; color: #FFFFFF; margin-bottom: 20px; }
+    .panel-header { font-size: 18px; font-weight: 600; color: #FFFFFF; margin-bottom: 15px; }
     div[data-testid="stNumberInput"], div[data-testid="stSelectbox"], div[data-testid="stTextInput"] input { background-color: #091122 !important; color: #F8FAFC !important; border-radius: 8px !important; }
     div.stButton > button { width: 100%; height: 56px; border-radius: 12px; border: none; color: white; font-size: 16px; font-weight: 700; background: linear-gradient(90deg, #2563EB 0%, #7C3AED 100%); margin-top: 15px; }
+    
     .ltp-container { background: linear-gradient(90deg, rgba(37,99,235,0.15) 0%, rgba(124,58,237,0.05) 100%); border: 1px solid #1E3A8A; padding: 25px; border-radius: 12px; text-align: center; margin-bottom: 25px; }
+    
+    /* Risk Engine Status Tags */
+    .status-card { padding: 20px; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center; margin-top: 15px; }
+    .good-to-go { background: rgba(16, 185, 129, 0.1); border: 1px solid #10B981; color: #10B981; }
+    .caution { background: rgba(245, 158, 11, 0.1); border: 1px solid #F59E0B; color: #F59E0B; }
+    .high-risk { background: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444; color: #EF4444; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -59,21 +71,20 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ---------------- INDEX SELECTION ----------------
+# ---------------- INDEX SELECTION (WITH RESET TRIGGER) ----------------
 target_index = st.selectbox(
     "Select Target Market Index", 
     ["NIFTY 50", "SENSEX", "BANKEX"], 
     key="index_selector", 
-    on_change=on_index_change
+    on_change=reset_index_baselines
 )
 mode = st.radio("Select Input Mode", ["Manual Input", "AngelOne Live Stream"], horizontal=True)
 
-if mode == "Manual Input":
-    if st.session_state.api_authenticated:
-        st.session_state.api_authenticated = False
-        st.session_state.smart_api = None
+if mode == "Manual Input" and st.session_state.api_authenticated:
+    st.session_state.api_authenticated = False
+    st.session_state.smart_api = None
 
-feed_status_message = "Manual Control Active" if mode == "Manual Input" else "Streaming Core Live"
+feed_status_message = "Manual Control Mode" if mode == "Manual Input" else "Streaming Live SDK Feed"
 
 # ---------------- SECURE NATIVE ANGELONE GATEWAY ----------------
 if mode == "AngelOne Live Stream":
@@ -100,7 +111,7 @@ if mode == "AngelOne Live Stream":
                     st.session_state.api_authenticated = True
                     st.rerun()
                 else:
-                    st.error(f"Gateway Access Denied: {session_data.get('message', 'Check Entry Configuration')}")
+                    st.error(f"Gateway Access Denied: {session_data.get('message', 'Check Details Configuration')}")
             except Exception as e:
                 st.error(f"Connection Exception: {e}")
                 
@@ -115,15 +126,15 @@ if mode == "AngelOne Live Stream":
             
             if market_data.get('status') == True and 'data' in market_data and market_data['data']['fetched']:
                 tick = market_data['data']['fetched'][0]
-                # Track the active live ticker price directly into memory state
                 st.session_state.current_price = float(tick.get('ltp', st.session_state.current_price))
+                st.session_state.baseline_open = float(tick.get('open', st.session_state.baseline_open))
         except Exception as data_err:
             st.error(f"Error parsing live market ticks: {data_err}")
 
-# ---------------- DYNAMIC LIVE PRICE HUD DISPLAY ----------------
+# ---------------- LIVE PRICE READOUT HUB ----------------
 st.markdown(f"""
 <div class="ltp-container">
-    <span style="font-size:14px; color:#A5B4FC; text-transform:uppercase; font-weight:700; letter-spacing:1px;">⚡ Target Live Price (LTP)</span>
+    <span style="font-size:14px; color:#A5B4FC; text-transform:uppercase; font-weight:700; letter-spacing:1px;">⚡ Target Live Current Price (LTP)</span>
     <h1 style="margin:8px 0 0 0; font-size:42px; font-weight:900; color:#FFFFFF; letter-spacing:-0.5px;">₹ {st.session_state.current_price:,.2f}</h1>
 </div>
 """, unsafe_allow_html=True)
@@ -131,49 +142,58 @@ st.markdown(f"""
 m1, m2, m3, m4 = st.columns(4)
 m1.metric(label="📅 Target Index", value=target_index)
 m2.metric(label="🕒 Feed Source", value=feed_status_message)
-m3.metric(label="📊 Pipeline Status", value="Live Tracking Sync" if st.session_state.api_authenticated else "Manual Mode")
+m3.metric(label="📊 Pipeline Status", value="Live Tracking Sync" if st.session_state.api_authenticated else "Manual Input Mode")
 m4.metric(label="⚡ Engine Core", value="ML Inference Ready" if model else "Simulated Mode")
 
-# ---------------- DYNAMIC PRICE CONFIGURATION PANEL ----------------
+# ---------------- CONTROL MATRIX INTERFACE ----------------
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-st.markdown('<div class="panel-header">🎯 Live Price Action Vector Tuning</div>', unsafe_allow_html=True)
+st.markdown('<div class="panel-header">🎯 Live Price Action Evaluation</div>', unsafe_allow_html=True)
 
-# Single input box tracking live metrics directly
+# Single input widget synced dynamically to chosen asset
 live_price_input = st.number_input(
-    "Adjust Price Position (₹)", 
+    f"Current Price Matrix Target ({target_index})", 
     format="%.2f", 
     value=st.session_state.current_price, 
     disabled=(mode == "AngelOne Live Stream"),
     key="live_price_widget"
 )
 
-predict_clicked = st.button("🚀 EXECUTE LIVE PRICE PREDICTION")
+predict_clicked = st.button("🚀 EXECUTE CURRENT PRICE PREDICTION")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- ML INFERENCE ENGINE RUNTIME ----------------
+# ---------------- ML INFERENCE ENGINE & RISK SIGNALS ----------------
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-st.markdown('<div class="panel-header">📊 Inference Vector Output</div>', unsafe_allow_html=True)
+st.markdown('<div class="panel-header">📊 AI Inference Framework Response</div>', unsafe_allow_html=True)
 
 if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_authenticated):
-    # FIXED: Map the single live price seamlessly across the 6 features expected by nifty_model.pkl
-    # Generates a baseline matrix where: open=LTP, high=LTP, low=LTP, close=LTP, volume=100000, return=0.0
-    data_array = np.array([[live_price_input, live_price_input, live_price_input, live_price_input, 100000.0, 0.0]])
+    # Safe 6-column dimensional mapping framework format
+    data_array = np.array([[st.session_state.baseline_open, live_price_input, live_price_input, live_price_input, 120000.0, 0.1]])
     
     if model is not None:
         prediction = model.predict(data_array)[0]
         probability = model.predict_proba(data_array)[0]
         confidence = probability[1] * 100 if prediction == 1 else probability[0] * 100
     else:
-        # Fallback verification toggle rule if model is running standalone
-        prediction = 1
-        confidence = 87.42
+        # Balanced baseline calculation standard fallback
+        prediction = 1 if live_price_input >= st.session_state.baseline_open else 0
+        confidence = 84.50
     
+    # OUTPUT 1: AI Directional Signals
     if prediction == 1:
         st.success(f"📈 PROJECTION VECTOR: BULLISH (UP) - Live Intraday Confidence: {confidence:.2f}%")
     else:
         st.error(f"📉 PROJECTION VECTOR: BEARISH (DOWN) - Live Intraday Confidence: {confidence:.2f}%")
+        
+    # OUTPUT 2: Strategic Risk Metrics ("Good to Go" / "Risky")
+    st.write("")
+    if prediction == 1 and confidence >= 85.0:
+        st.markdown('<div class="status-card good-to-go">🟢 MARKET RADAR: GOOD TO GO (Strong Bullish Momentum Detected)</div>', unsafe_allow_html=True)
+    elif prediction == 0 and confidence >= 80.0:
+        st.markdown('<div class="status-card high-risk">🔴 MARKET RADAR: HIGH RISK / STAY OUT (Heavy Resistance Building Up)</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="status-card caution">🟡 MARKET RADAR: CAUTION / RISKY RIGHT NOW (Volatile Range-Bound Action)</div>', unsafe_allow_html=True)
 else:
-    st.info("Establishing current baseline price tracking vector. Run terminal link to stream metrics.")
+    st.info("System Ready. Establish terminal connection or execute parameters to read risk-mitigation metrics.")
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- BACKGROUND REFRESH TICKER LOOP ----------------
