@@ -20,12 +20,13 @@ if "smart_api" not in st.session_state: st.session_state.smart_api = None
 if "api_authenticated" not in st.session_state: st.session_state.api_authenticated = False
 if "refresh_counter" not in st.session_state: st.session_state.refresh_counter = 0
 
-if "open" not in st.session_state: st.session_state.open = 0.0
-if "high" not in st.session_state: st.session_state.high = 0.0
-if "low" not in st.session_state: st.session_state.low = 0.0
-if "close" not in st.session_state: st.session_state.close = 0.0
-if "volume" not in st.session_state: st.session_state.volume = 0.0
-if "prev_return" not in st.session_state: st.session_state.prev_return = 0.0
+# Set dynamic default values based on the last known real-world index ranges instead of generic 0.0
+if "open" not in st.session_state: st.session_state.open = 23500.0
+if "high" not in st.session_state: st.session_state.high = 23600.0
+if "low" not in st.session_state: st.session_state.low = 23400.0
+if "close" not in st.session_state: st.session_state.close = 23550.0
+if "volume" not in st.session_state: st.session_state.volume = 150000.0
+if "prev_return" not in st.session_state: st.session_state.prev_return = 0.25
 
 # ---------------- THEME CSS ----------------
 st.markdown("""
@@ -38,7 +39,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- MODEL LOADING ----------------
+# ---------------- ML MODEL CONFIGURATION ----------------
 @st.cache_resource
 def load_ml_model():
     try:
@@ -59,13 +60,23 @@ st.markdown("""
 target_index = st.selectbox("Select Target Market Index", ["NIFTY 50", "SENSEX", "BANKEX"])
 mode = st.radio("Select Input Mode", ["Manual Input", "AngelOne Live Stream"], horizontal=True)
 
+# Handle manual mode baseline updates
 if mode == "Manual Input":
-    st.session_state.api_authenticated = False
-    st.session_state.smart_api = None
+    if st.session_state.api_authenticated:
+        st.session_state.api_authenticated = False
+        st.session_state.smart_api = None
+    # Reset standard index baselines if empty
+    if st.session_state.open == 0.0 or st.session_state.open == 23500.0:
+        if target_index == "SENSEX":
+            st.session_state.open, st.session_state.high, st.session_state.low, st.session_state.close = 77000.0, 77300.0, 76800.0, 77100.0
+        elif target_index == "BANKEX":
+            st.session_state.open, st.session_state.high, st.session_state.low, st.session_state.close = 58000.0, 58300.0, 57800.0, 58100.0
+        else:
+            st.session_state.open, st.session_state.high, st.session_state.low, st.session_state.close = 23500.0, 23600.0, 23400.0, 23550.0
 
-feed_status_message = "Awaiting Live Stream Initialization"
+feed_status_message = "Manual Mode Overrides Active" if mode == "Manual Input" else "Awaiting Gateway Authentication Handshake"
 
-# ---------------- ANGELONE HUB WITH NEW MASTER TOKENS ----------------
+# ---------------- SECURE NATIVE ANGELONE TERMINAL ----------------
 if mode == "AngelOne Live Stream":
     if not st.session_state.api_authenticated:
         st.markdown('<div class="content-panel">', unsafe_allow_html=True)
@@ -90,14 +101,13 @@ if mode == "AngelOne Live Stream":
                     st.session_state.api_authenticated = True
                     st.rerun()
                 else:
-                    st.error(f"Gateway Access Denied: {session_data.get('message', 'Check Credentials')}")
+                    st.error(f"Gateway Access Denied: {session_data.get('message', 'Check Credentials Configuration')}")
             except Exception as e:
-                st.error(f"Connection Error: {e}")
+                st.error(f"Connection Exception: {e}")
                 
     if st.session_state.api_authenticated and st.session_state.smart_api:
         feed_status_message = f"AngelOne Streaming Active (Tick #{st.session_state.refresh_counter})"
         try:
-            # CORRECTED: Official system index tokens for market stream mapping
             token_map = {"NIFTY 50": "99926000", "SENSEX": "1", "BANKEX": "12"}
             exchange_map = {"NIFTY 50": "NSE", "SENSEX": "BSE", "BANKEX": "BSE"}
             
@@ -107,26 +117,27 @@ if mode == "AngelOne Live Stream":
             if market_data.get('status') == True and 'data' in market_data and market_data['data']['fetched']:
                 tick = market_data['data']['fetched'][0]
                 
-                # Update background tracking state safely
-                st.session_state.close = float(tick.get('ltp', 0))
-                st.session_state.open = float(tick.get('open', 0))
-                st.session_state.high = float(tick.get('high', 0))
-                st.session_state.low = float(tick.get('low', 0))
-                st.session_state.volume = float(tick.get('tradeVolume', tick.get('volume', 0)))
-                st.session_state.prev_return = float(tick.get('percentChange', 0))
+                # Dynamically write current incoming ticker streams onto memory states
+                st.session_state.close = float(tick.get('ltp', st.session_state.close))
+                st.session_state.open = float(tick.get('open', st.session_state.open))
+                st.session_state.high = float(tick.get('high', st.session_state.high))
+                st.session_state.low = float(tick.get('low', st.session_state.low))
+                st.session_state.volume = float(tick.get('tradeVolume', tick.get('volume', st.session_state.volume)))
+                st.session_state.prev_return = float(tick.get('percentChange', st.session_state.prev_return))
         except Exception as data_err:
             st.error(f"Error parsing live market ticks: {data_err}")
 
-# ---------------- DISPLAY INTERFACE ----------------
+# ---------------- DISPLAY HUD ----------------
 m1, m2, m3, m4 = st.columns(4)
 m1.metric(label="📅 Target Index", value=target_index)
-m2.metric(label="🕒 Feed Source", value=feed_status_message if mode == "AngelOne Live Stream" else "Manual Matrix")
-m3.metric(label="📊 Pipeline Status", value="Live Tracking" if st.session_state.api_authenticated else "Offline")
+m2.metric(label="🕒 Feed Source", value=feed_status_message)
+m3.metric(label="📊 Pipeline Status", value="Live Tracking" if st.session_state.api_authenticated else "Offline / Manual Mode")
 m4.metric(label="⚡ Engine Core", value="ML Inference Ready" if model else "Simulated Mode")
 
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
 st.markdown(f'<div class="panel-header">📊 Dynamic Matrix Tuning: {target_index}</div>', unsafe_allow_html=True)
 
+# Sync UI inputs seamlessly from persistent session memories
 c1, c2 = st.columns(2, gap="medium")
 with c1:
     open_val = st.number_input("Open Price (₹)", format="%.2f", value=st.session_state.open, disabled=(mode == "AngelOne Live Stream"), key="open_inp")
@@ -140,8 +151,11 @@ with c2:
 predict_clicked = st.button("🚀 EXECUTE PREDICTION MATRIX")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- INFERENCE CALCULATION ----------------
+# ---------------- ML INFERENCE ENGINE RUNTIME ----------------
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
+st.markdown('<div class="panel-header">🎯 Inference Engine Output</div>', unsafe_allow_html=True)
+
+# Execute predictions on explicit button clicks OR continuously if live feed is successfully authenticated
 if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_authenticated):
     data_array = np.array([[open_val, high_val, low_val, close_val, vol_val, ret_val]])
     if model is not None:
@@ -153,14 +167,14 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_a
         confidence = 85.5 if prediction == 1 else 82.3
     
     if prediction == 1:
-        st.success(f"📈 PROJECTION VECTOR: BULLISH (UP) - Live Intraday Confidence: {confidence:.2f}%")
+        st.success(f"📈 PROJECTION VECTOR: BULLISH (UP) - Confidence: {confidence:.2f}%")
     else:
-        st.error(f"📉 PROJECTION VECTOR: BEARISH (DOWN) - Live Intraday Confidence: {confidence:.2f}%")
+        st.error(f"📉 PROJECTION VECTOR: BEARISH (DOWN) - Confidence: {confidence:.2f}%")
 else:
-    st.info("Awaiting input parameters or live terminal data handshake.")
+    st.info("Awaiting execution parameters. Select manual configurations or establish live terminal handshake link.")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- ACTIVE BACKGROUND STREAM TIMER ----------------
+# ---------------- BACKGROUND REFRESH TICKER LOOP ----------------
 if mode == "AngelOne Live Stream" and st.session_state.api_authenticated:
     time.sleep(4)
     st.session_state.refresh_counter += 1
