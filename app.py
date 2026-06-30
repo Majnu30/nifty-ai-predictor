@@ -302,13 +302,13 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.get('
     cols_list = ["Contract Identifier Ticker", "Target Entry Threshold", "Risk Stop Loss (SL)", "Take Profit Target"]
     df_matrix = pd.DataFrame(strategy_data, columns=cols_list)
     
+    # Fixed: Removed text_gradient to prevent reliance on matplotlib backend engines
     st.dataframe(
         df_matrix.style.format({
             "Target Entry Threshold": "₹ {:.2f}",
             "Risk Stop Loss (SL)": "₹ {:.2f}",
             "Take Profit Target": "₹ {:.2f}"
-        }).text_gradient(cmap="coolwarm", subset=["Target Entry Threshold"])
-          .set_properties(**{'background-color': '#091122', 'color': '#F8FAFC'}),
+        }).set_properties(**{'background-color': '#091122', 'color': '#F8FAFC'}),
         use_container_width=True,
         hide_index=True
     )
