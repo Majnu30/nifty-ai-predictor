@@ -8,7 +8,7 @@ from SmartApi import SmartConnect
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
-    page_title="MAJNU AI Predictor",
+    page_title="MAJNU AI Options Predictor",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -18,16 +18,16 @@ st.set_page_config(
 def reset_index_baselines():
     selected = st.session_state.index_selector
     if selected == "SENSEX":
-        st.session_state.current_price = 76700.0
+        st.session_state.current_price = 76730.0
         st.session_state.baseline_open = 77000.0
         st.session_state.strike_step = 100
     elif selected == "BANKEX":
-        st.session_state.current_price = 57700.0
-        st.session_state.baseline_open = 58100.0
+        st.session_state.current_price = 65200.0
+        st.session_state.baseline_open = 65500.0
         st.session_state.strike_step = 100
     else: # NIFTY 50 Default
-        st.session_state.current_price = 23940.0
-        st.session_state.baseline_open = 24060.0
+        st.session_state.current_price = 23950.0
+        st.session_state.baseline_open = 24030.0
         st.session_state.strike_step = 50
 
 # ---------------- INITIALIZE PERSISTENT STORAGE ----------------
@@ -35,8 +35,8 @@ if "smart_api" not in st.session_state: st.session_state.smart_api = None
 if "api_authenticated" not in st.session_state: st.session_state.api_authenticated = False
 if "refresh_counter" not in st.session_state: st.session_state.refresh_counter = 0
 
-if "current_price" not in st.session_state: st.session_state.current_price = 23940.0
-if "baseline_open" not in st.session_state: st.session_state.baseline_open = 24060.0
+if "current_price" not in st.session_state: st.session_state.current_price = 23950.0
+if "baseline_open" not in st.session_state: st.session_state.baseline_open = 24030.0
 if "strike_step" not in st.session_state: st.session_state.strike_step = 50
 
 # ---------------- THEME CSS ----------------
@@ -54,8 +54,6 @@ st.markdown("""
     .good-to-go { background: rgba(16, 185, 129, 0.1); border: 1px solid #10B981; color: #10B981; }
     .caution { background: rgba(245, 158, 11, 0.1); border: 1px solid #F59E0B; color: #F59E0B; }
     .high-risk { background: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444; color: #EF4444; }
-    
-    .intel-card { background: #0B1528; border: 1px dashed #2563EB; padding: 20px; border-radius: 12px; margin-top: 15px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -72,7 +70,7 @@ model = load_ml_model()
 
 st.markdown("""
     <div style="background: linear-gradient(135deg, #040A18 0%, #06132C 100%); border: 1px solid #111E3B; border-radius: 16px; padding: 30px; margin-bottom: 20px;">
-        <h1 style="font-size: 36px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">MARKET <span style="color: #3B82F6;">AI</span> OPTIONS ENGINE</h1>
+        <h1 style="font-size: 36px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">MARKET <span style="color: #3B82F6;">AI</span> 20-STRIKE SIGNAL MATRIX</h1>
     </div>
 """, unsafe_allow_html=True)
 
@@ -147,7 +145,7 @@ st.markdown(f"""
 m1, m2, m3, m4 = st.columns(4)
 m1.metric(label="📅 Target Index", value=target_index)
 m2.metric(label="🕒 Feed Source", value=feed_status_message)
-m3.metric(label="📊 Pipeline Status", value="Live Tracking Sync" if st.session_state.api_authenticated else "Manual Input Mode")
+m3.metric(label="📊 Pipeline Status", value="Live Sync Active" if st.session_state.api_authenticated else "Manual Mode")
 m4.metric(label="⚡ Engine Core", value="ML Inference Ready" if model else "Simulated Mode")
 
 # ---------------- CONTROL MATRIX INTERFACE ----------------
@@ -162,14 +160,14 @@ live_price_input = st.number_input(
     key="live_price_widget"
 )
 
-predict_clicked = st.button("🚀 EXECUTE MULTI-STRIKE OPTION ANALYSIS")
+predict_clicked = st.button("🚀 EXECUTE 20-STRIKE OPTION MATRIX ANALYSIS")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- ML INFERENCE ENGINE & RISK SIGNALS ----------------
-st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-st.markdown('<div class="panel-header">📊 AI Multi-Call Matrix Output</div>', unsafe_allow_html=True)
-
+# ---------------- INFERENCE CORE & 20-STRIKE MATRIX TABLE ----------------
 if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_authenticated):
+    st.markdown('<div class="content-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="panel-header">📊 AI Inference Framework Response</div>', unsafe_allow_html=True)
+    
     data_array = np.array([[st.session_state.baseline_open, live_price_input, live_price_input, live_price_input, 120000.0, 0.1]])
     
     if model is not None:
@@ -180,62 +178,58 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_a
         prediction = 1 if live_price_input >= st.session_state.baseline_open else 0
         confidence = 84.50
     
-    # 1. Directional Prediction Output
     if prediction == 1:
-        st.success(f"📈 PROJECTION VECTOR: BULLISH (UP) - Live Intraday Confidence: {confidence:.2f}%")
-        status_html = '<div class="status-card good-to-go">🟢 MARKET RADAR: GOOD TO GO (Strong Bullish Momentum)</div>'
+        st.success(f"📈 PROJECTION VECTOR: BULLISH (UP) - Intraday Confidence: {confidence:.2f}%")
+        st.markdown('<div class="status-card good-to-go">🟢 MARKET RADAR: GOOD TO GO (Bullish Framework Favored)</div>', unsafe_allow_html=True)
     else:
-        st.error(f"📉 PROJECTION VECTOR: BEARISH (DOWN) - Live Intraday Confidence: {confidence:.2f}%")
-        status_html = '<div class="status-card high-risk">🔴 MARKET RADAR: MARKET IS RISKY RIGHT NOW (Bearish Resistance Detected)</div>'
-        
-    st.markdown(status_html, unsafe_allow_html=True)
+        st.error(f"📉 PROJECTION VECTOR: BEARISH (DOWN) - Intraday Confidence: {confidence:.2f}%")
+        st.markdown('<div class="status-card high-risk">🔴 MARKET RADAR: MARKET IS RISKY RIGHT NOW (Bearish Pressure Dominant)</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # 2. ADVANCED MULTI-CALL & STRIKE ENTRY/TARGET RADAR
-    st.markdown('<div class="intel-card">', unsafe_allow_html=True)
-    st.markdown("<h4 style='margin:0 0 15px 0; color:#3B82F6;'>🎯 Multi-Call Strategy Planner (Entry, Stop Loss, Target)</h4>", unsafe_allow_html=True)
+    # DYNAMIC 20-CALL OPTION STRIKE GENERATOR WITH HARD CODED PRICE BASES
+    st.markdown('<div class="content-panel">', unsafe_allow_html=True)
+    st.markdown('<div class="panel-header">🎯 Compiling Live Option Matrix Tickers (Absolute Price Targets)</div>', unsafe_allow_html=True)
     
     step = st.session_state.strike_step
-    base_strike = round(live_price_input / step) * step
+    atm_strike = round(live_price_input / step) * step
     
-    if prediction == 1:
-        st.write("💡 **AI Recommendation:** Bullish structures dominant. Evaluating the optimal **Call Options (CE)** matrix:")
+    calls_data = []
+    puts_data = []
+    
+    # Generate 10 distinct call options loops and 10 distinct put options loops
+    for i in range(-5, i + 5):
+        # Call Matrix Logic
+        c_strike = atm_strike + (i * step)
+        c_entry = max(15.0, round((atm_strike - c_strike) * 0.4 + 95.0, 1))
+        c_tgt = round(c_entry + (45.0 if prediction == 1 else 20.0), 1)
+        c_sl = round(c_entry - (20.0 if prediction == 1 else 10.0), 1)
+        calls_data.append([f"{target_index} {c_strike} CE", f"₹ {c_entry}", f"₹ {c_sl}", f"₹ {c_tgt}"])
         
-        # Build 3 clear Option Strategy tiers
-        t1, t2, t3 = st.columns(3)
-        with t1:
-            st.subheader("🔥 Deep ITM (Conservative)")
-            st.code(f"Strike: {base_strike - step} CE\nEntry: Above Breakout\nTarget: +25% Premium\nStop Loss: -12% Premium")
-        with t2:
-            st.subheader("⚡ ATM (Balanced)")
-            st.code(f"Strike: {base_strike} CE\nEntry: On Intraday Pullback\nTarget: +40% Premium\nStop Loss: -15% Premium")
-        with t3:
-            st.subheader("🚀 OTM (Aggressive)")
-            st.code(f"Strike: {base_strike + step} CE\nEntry: Small Lot Sizing Only\nTarget: +70% Premium\nStop Loss: -20% Premium")
-    else:
-        st.write("💡 **AI Recommendation:** Bearish pressure building. Evaluating the optimal **Put Options (PE)** matrix:")
-        
-        t1, t2, t3 = st.columns(3)
-        with t1:
-            st.subheader("🔥 Deep ITM (Conservative)")
-            st.code(f"Strike: {base_strike + step} PE\nEntry: Above Breakout\nTarget: +25% Premium\nStop Loss: -12% Premium")
-        with t2:
-            st.subheader("⚡ ATM (Balanced)")
-            st.code(f"Strike: {base_strike} PE\nEntry: On Intraday Pullback\nTarget: +40% Premium\nStop Loss: -15% Premium")
-        with t3:
-            st.subheader("🚀 OTM (Aggressive)")
-            st.code(f"Strike: {base_strike - step} PE\nEntry: Small Lot Sizing Only\nTarget: +70% Premium\nStop Loss: -20% Premium")
-        
+        # Put Matrix Logic
+        p_strike = atm_strike + (i * step)
+        p_entry = max(15.0, round((p_strike - atm_strike) * 0.4 + 95.0, 1))
+        p_tgt = round(p_entry + (45.0 if prediction == 0 else 20.0), 1)
+        p_sl = round(p_entry - (20.0 if prediction == 0 else 10.0), 1)
+        puts_data.append([f"{target_index} {p_strike} PE", f"₹ {p_entry}", f"₹ {p_sl}", f"₹ {p_tgt}"])
+
+    cols_list = ["Option Contract Ticker", "Execution Entry Level", "Risk Stop Loss (SL)", "Take Profit Target"]
+    
+    st.subheader("📈 Top 10 Bullish Call Option Configurations (CE)")
+    st.table(pd.DataFrame(calls_data, columns=cols_list))
+    
+    st.subheader("📉 Top 10 Bearish Put Option Configurations (PE)")
+    st.table(pd.DataFrame(puts_data, columns=cols_list))
     st.markdown('</div>', unsafe_allow_html=True)
 
 else:
+    st.markdown('<div class="content-panel">', unsafe_allow_html=True)
     st.markdown("""
         <div style="text-align: center; padding: 40px 20px; color: #64748B;">
-            <p style="font-size: 18px; font-weight: 500; margin: 0;">📊 Multi-Strike Engine Awaiting Input</p>
-            <p style="font-size: 14px; margin-top: 5px;">Initiate your AngelOne Stream or click 'Execute' to dynamically compile entry points and targets.</p>
+            <p style="font-size: 18px; font-weight: 500; margin: 0;">📊 20-Strike Signal Matrix Offline</p>
+            <p style="font-size: 14px; margin-top: 5px;">Establish a secure live tracking handshake to display entry, target, and trailing configurations across all 20 options lines.</p>
         </div>
     """, unsafe_allow_html=True)
-
-st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- BACKGROUND REFRESH TICKER LOOP ----------------
 if mode == "AngelOne Live Stream" and st.session_state.api_authenticated:
