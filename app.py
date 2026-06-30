@@ -230,7 +230,7 @@ m4.metric(label="⚡ Pipeline Mode", value="Neural Weight Core" if model else "A
 
 st.write("")
 
-# ---------------- UPGRADE MODULE: POSITION RISK MANAGEMENT ----------------
+# ---------------- MODULE: POSITION RISK MANAGEMENT ----------------
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
 st.markdown('<div class="panel-header">🛡️ MAJNU Tactical Capital Risk Engine</div>', unsafe_allow_html=True)
 r_col1, r_col2 = st.columns(2)
@@ -262,7 +262,6 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.get('
     
     data_array = np.array([[baseline_open_display, live_price_input, live_price_input, live_price_input, 120000.0, 0.1]])
     
-    # Mathematical Confluence Mocking Framework
     ema_bullish = live_price_input >= (baseline_open_display * 0.998)
     rsi_healthy = 40.0 <= 58.5 <= 70.0
     
@@ -274,7 +273,6 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.get('
         prediction = 1 if live_price_input >= baseline_open_display else 0
         ai_confidence = 81.20
         
-    # Calculate Confluence Score matching indicator alignment
     confluence_matches = sum([prediction == 1 and ema_bullish, prediction == 0 and not ema_bullish, rsi_healthy])
     confluence_score = 65.0 + (confluence_matches * 11.5)
         
@@ -306,7 +304,6 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.get('
     atm_strike = round(live_price_input / step) * step
     strategy_data = []
     
-    # Calculate Capital Risk Caps
     max_rupees_risk = trading_capital * (risk_percent / 100.0)
     
     if prediction == 1:
@@ -317,7 +314,6 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.get('
             c_tgt = round(c_entry + 45.0, 1)
             c_sl = round(c_entry - 20.0, 1)
             
-            # Position sizing computation logic
             risk_per_contract_unit = max(1.0, c_entry - c_sl)
             risk_per_lot = risk_per_contract_unit * lot_size_display
             max_recommended_lots = int(max_rupees_risk // risk_per_lot)
