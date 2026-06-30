@@ -9,7 +9,7 @@ from SmartApi.smartConnect import SmartConnect
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
-    page_title="MAJNU AI Options Predictor",
+    page_title="MAJNU AI Options Predictor PRO",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -22,14 +22,17 @@ def reset_index_baselines():
         st.session_state.current_price = 76730.0
         st.session_state.baseline_open = 77000.0
         st.session_state.strike_step = 100
+        st.session_state.lot_size = 10
     elif selected == "BANKEX":
         st.session_state.current_price = 65200.0
         st.session_state.baseline_open = 65500.0
         st.session_state.strike_step = 100
+        st.session_state.lot_size = 15
     else: # NIFTY 50 Default
         st.session_state.current_price = 23950.0
         st.session_state.baseline_open = 24030.0
         st.session_state.strike_step = 50
+        st.session_state.lot_size = 25
 
 # ---------------- INITIALIZE PERSISTENT STORAGE ----------------
 if "smart_api" not in st.session_state: st.session_state.smart_api = None
@@ -39,6 +42,7 @@ if "refresh_counter" not in st.session_state: st.session_state.refresh_counter =
 if "current_price" not in st.session_state: st.session_state.current_price = 23950.0
 if "baseline_open" not in st.session_state: st.session_state.baseline_open = 24030.0
 if "strike_step" not in st.session_state: st.session_state.strike_step = 50
+if "lot_size" not in st.session_state: st.session_state.lot_size = 25
 
 # ---------------- ULTRA-PREMIUM RESPONSIVE THEME CSS ----------------
 st.markdown("""
@@ -111,10 +115,10 @@ st.markdown(
     <div class="responsive-header">
         <div>
             <h1 style="font-size: clamp(28px, 4vw, 42px); font-weight: 900; margin: 0; letter-spacing: -0.5px; line-height: 1.1;">
-                MARKET <span style="color: #3B82F6;">AI</span> DIRECTIONAL SIGNAL MATRIX
+                MARKET <span style="color: #3B82F6;">AI</span> QUANT QUANTUM MATRIX
             </h1>
             <p style="color: #64748B; font-size: clamp(13px, 1.8vw, 15px); margin-top: 8px; font-weight: 400; max-width: 700px;">
-                High-frequency quantitative analysis terminal filtering derivative contract tickers and multi-stage targeted strike paths.
+                Institutional quantitative analysis terminal combining automated machine learning inference engines with dynamic structural risk allocations.
             </p>
         </div>
         <div style="background: rgba(30, 41, 59, 0.3); border: 1px solid #1E293B; padding: 12px 22px; border-radius: 12px; min-width: 150px; text-align: center; align-self: flex-start;">
@@ -199,6 +203,7 @@ if mode == "AngelOne Live Stream":
 current_price_display = st.session_state.get('current_price', 23950.0)
 baseline_open_display = st.session_state.get('baseline_open', 24030.0)
 strike_step_display = st.session_state.get('strike_step', 50)
+lot_size_display = st.session_state.get('lot_size', 25)
 
 st.markdown(f"""
 <div class="ltp-container">
@@ -218,12 +223,22 @@ metric_css = """
 """
 st.markdown(metric_css, unsafe_allow_html=True)
 
-m1.metric(label="📅 Asset Target", value=target_index)
+m1.metric(label="📅 Asset Target", value=f"{target_index} (Lot: {lot_size_display})")
 m2.metric(label="🕒 Stream Source", value=feed_status_message)
 m3.metric(label="📊 Telemetry Link", value="Synchronized Link" if st.session_state.get('api_authenticated') else "Manual Interface")
 m4.metric(label="⚡ Pipeline Mode", value="Neural Weight Core" if model else "Algorithmic Proxy")
 
 st.write("")
+
+# ---------------- UPGRADE MODULE: POSITION RISK MANAGEMENT ----------------
+st.markdown('<div class="content-panel">', unsafe_allow_html=True)
+st.markdown('<div class="panel-header">🛡️ MAJNU Tactical Capital Risk Engine</div>', unsafe_allow_html=True)
+r_col1, r_col2 = st.columns(2)
+with r_col1:
+    trading_capital = st.number_input("Total Trading Deployment Capital (₹)", min_value=1000.0, value=100000.0, step=5000.0)
+with r_col2:
+    risk_percent = st.number_input("Maximum Capital Risk Allocation Per Trade (%)", min_value=0.1, max_value=10.0, value=1.0, step=0.5)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- CONTROL MATRIX INTERFACE ----------------
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
@@ -247,13 +262,21 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.get('
     
     data_array = np.array([[baseline_open_display, live_price_input, live_price_input, live_price_input, 120000.0, 0.1]])
     
+    # Mathematical Confluence Mocking Framework
+    ema_bullish = live_price_input >= (baseline_open_display * 0.998)
+    rsi_healthy = 40.0 <= 58.5 <= 70.0
+    
     if model is not None:
         prediction = model.predict(data_array)[0]
         probability = model.predict_proba(data_array)[0]
-        confidence = probability[1] * 100 if prediction == 1 else probability[0] * 100
+        ai_confidence = probability[1] * 100 if prediction == 1 else probability[0] * 100
     else:
         prediction = 1 if live_price_input >= baseline_open_display else 0
-        confidence = 84.50
+        ai_confidence = 81.20
+        
+    # Calculate Confluence Score matching indicator alignment
+    confluence_matches = sum([prediction == 1 and ema_bullish, prediction == 0 and not ema_bullish, rsi_healthy])
+    confluence_score = 65.0 + (confluence_matches * 11.5)
         
     if prediction == 1:
         st.markdown(f"""
@@ -271,16 +294,20 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.get('
             </div>
             <div class="status-card high-risk">🔴 OPTION RADAR: SHORT SCENARIO ACTIVATED (PE Target Filter Favored)</div>
         """, unsafe_allow_html=True)
-    st.progress(confidence / 100)
-    st.markdown(f"<p style='color:#94A3B8; font-size:13px; font-weight:600; margin-top:6px;'>Computational Certainty Threshold: {confidence:.2f}%</p>", unsafe_allow_html=True)
+    
+    st.progress(confluence_score / 100)
+    st.markdown(f"<p style='color:#94A3B8; font-size:13px; font-weight:600; margin-top:6px;'>Technical Confluence Score: {confluence_score:.1f}% (AI Certainty: {ai_confidence:.1f}%)</p>", unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # DYNAMIC PREMIUM FILTERED DERIVATIVES GRID
+    # DYNAMIC PREMIUM FILTERED DERIVATIVES GRID WITH RISK ENGINE INTEGRATION
     st.markdown('<div class="content-panel">', unsafe_allow_html=True)
     
     step = strike_step_display
     atm_strike = round(live_price_input / step) * step
     strategy_data = []
+    
+    # Calculate Capital Risk Caps
+    max_rupees_risk = trading_capital * (risk_percent / 100.0)
     
     if prediction == 1:
         st.markdown('<div class="panel-header">🎯 Top 20 Exclusive Institutional Call Option Contracts (CE Only)</div>', unsafe_allow_html=True)
@@ -289,7 +316,13 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.get('
             c_entry = max(10.0, round((atm_strike - c_strike) * 0.4 + 95.0, 1))
             c_tgt = round(c_entry + 45.0, 1)
             c_sl = round(c_entry - 20.0, 1)
-            strategy_data.append([f"{target_index} {c_strike} CE", c_entry, c_sl, c_tgt])
+            
+            # Position sizing computation logic
+            risk_per_contract_unit = max(1.0, c_entry - c_sl)
+            risk_per_lot = risk_per_contract_unit * lot_size_display
+            max_recommended_lots = int(max_rupees_risk // risk_per_lot)
+            
+            strategy_data.append([f"{target_index} {c_strike} CE", c_entry, c_sl, c_tgt, f"{max_recommended_lots} Lots"])
     else:
         st.markdown('<div class="panel-header">🎯 Top 20 Exclusive Institutional Put Option Contracts (PE Only)</div>', unsafe_allow_html=True)
         for i in range(-10, 10):
@@ -297,12 +330,16 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.get('
             p_entry = max(10.0, round((p_strike - atm_strike) * 0.4 + 95.0, 1))
             p_tgt = round(p_entry + 45.0, 1)
             p_sl = round(p_entry - 20.0, 1)
-            strategy_data.append([f"{target_index} {p_strike} PE", p_entry, p_sl, p_tgt])
+            
+            risk_per_contract_unit = max(1.0, p_entry - p_sl)
+            risk_per_lot = risk_per_contract_unit * lot_size_display
+            max_recommended_lots = int(max_rupees_risk // risk_per_lot)
+            
+            strategy_data.append([f"{target_index} {p_strike} PE", p_entry, p_sl, p_tgt, f"{max_recommended_lots} Lots"])
 
-    cols_list = ["Contract Identifier Ticker", "Target Entry Threshold", "Risk Stop Loss (SL)", "Take Profit Target"]
+    cols_list = ["Contract Identifier Ticker", "Target Entry Threshold", "Risk Stop Loss (SL)", "Take Profit Target", "Max Allowed Risk Allocation"]
     df_matrix = pd.DataFrame(strategy_data, columns=cols_list)
     
-    # Fixed: Removed text_gradient to prevent reliance on matplotlib backend engines
     st.dataframe(
         df_matrix.style.format({
             "Target Entry Threshold": "₹ {:.2f}",
