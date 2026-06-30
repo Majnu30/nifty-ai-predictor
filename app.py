@@ -272,43 +272,56 @@ if mode == "AngelOne Live Stream":
             if "PROXY_URL" in os.environ:
                 proxies = {"http": os.environ["PROXY_URL"], "https": os.environ["PROXY_URL"]}
                 
-            response = requests.post(auth_url, json=auth_payload, headers=headers, proxies=proxies).json()
+            # Safely request auth without instantly parsing JSON
+            raw_auth_res = requests.post(auth_url, json=auth_payload, headers=headers, proxies=proxies)
             
-            if response.get('status') == True and 'data' in response:
-                api_authenticated = True
-                jwt_token = response['data']['jwtToken']
-                
-                token_map = {"NIFTY 50": "26000", "SENSEX": "1", "BANKEX": "12"}
-                exchange_map = {"NIFTY 50": "NSE", "SENSEX": "BSE", "BANKEX": "BSE"}
-                
-                market_url = "https://apiconnect.angelone.in/rest/secure/angelbroking/market/data/v1/getMarketData"
-                market_headers = {
-                    "Content-Type": "application/json",
-                    "X-PrivateKey": API_KEY,
-                    "X-JWTToken": f"Bearer {jwt_token}",
-                    "Accept": "application/json"
-                }
-                market_payload = {
-                    "mode": "OHLC",
-                    "exchangeTokens": {
-                        exchange_map[target_index]: [token_map[target_index]]
-                    }
-                }
-                
-                market_res = requests.post(market_url, json=market_payload, headers=market_headers, proxies=proxies).json()
-                
-                if market_res.get('status') == True and 'data' in market_res and 'fetched' in market_res['data']:
-                    live_ticks = market_res['data']['fetched'][0]
-                    open_price = float(live_ticks.get('open', 0))
-                    high_price = float(live_ticks.get('high', 0))
-                    low_price = float(live_ticks.get('low', 0))
-                    close_price = float(live_ticks.get('ltp', 0))
-                    volume = float(live_ticks.get('volume', 0))
-                    previous_return = ((close_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
-                else:
-                    st.error("Market API endpoint returned data layout verification anomalies.")
+            if raw_auth_res.status_code != 200:
+                st.error(f"🔴 Authentication Server error! HTTP Status Code: {raw_auth_res.status_code}")
+                st.info("AngelOne might be blocking Streamlit Cloud's hosting IP address range.")
             else:
-                st.error(f"Gateway Access Denied: {response.get('message', 'Invalid response')}")
+                response = raw_auth_res.json()
+                
+                if response.get('status') == True and 'data' in response:
+                    api_authenticated = True
+                    jwt_token = response['data']['jwtToken']
+                    
+                    token_map = {"NIFTY 50": "26000", "SENSEX": "1", "BANKEX": "12"}
+                    exchange_map = {"NIFTY 50": "NSE", "SENSEX": "BSE", "BANKEX": "BSE"}
+                    
+                    market_url = "https://apiconnect.angelone.in/rest/secure/angelbroking/market/data/v1/getMarketData"
+                    market_headers = {
+                        "Content-Type": "application/json",
+                        "X-PrivateKey": API_KEY,
+                        "X-JWTToken": f"Bearer {jwt_token}",
+                        "Accept": "application/json"
+                    }
+                    market_payload = {
+                        "mode": "OHLC",
+                        "exchangeTokens": {
+                            exchange_map[target_index]: [token_map[target_index]]
+                        }
+                    }
+                    
+                    # Safely request market data without instantly parsing JSON
+                    raw_market_res = requests.post(market_url, json=market_payload, headers=market_headers, proxies=proxies)
+                    
+                    if raw_market_res.status_code != 200:
+                        st.error(f"🔴 Market Data Server error! HTTP Status Code: {raw_market_res.status_code}")
+                    else:
+                        market_res = raw_market_res.json()
+                        
+                        if market_res.get('status') == True and 'data' in market_res and 'fetched' in market_res['data']:
+                            live_ticks = market_res['data']['fetched'][0]
+                            open_price = float(live_ticks.get('open', 0))
+                            high_price = float(live_ticks.get('high', 0))
+                            low_price = float(live_ticks.get('low', 0))
+                            close_price = float(live_ticks.get('ltp', 0))
+                            volume = float(live_ticks.get('volume', 0))
+                            previous_return = ((close_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
+                        else:
+                            st.error("Market API endpoint returned data layout verification anomalies.")
+                else:
+                    st.error(f"Gateway Access Denied: {response.get('message', 'Invalid response')}")
         except Exception as api_err:
             st.error(f"Network handshake processing timeout: {api_err}")
     else:
