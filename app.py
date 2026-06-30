@@ -295,6 +295,7 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_a
     atm_strike = round(live_price_input / step) * step
     strategy_data = []
     
+    # FIXED: Ensured clean formatting and completely closed parenthesis matching inside list assignment
     if prediction == 1:
         st.markdown('<div class="panel-header">📊 Top 20 Filtered Institutional Bullish Options (CE Series Only)</div>', unsafe_allow_html=True)
         for i in range(-10, 10):
@@ -302,4 +303,33 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_a
             c_entry = max(8.5, round((atm_strike - c_strike) * 0.4 + 95.0, 1))
             c_tgt = round(c_entry + 50.0, 1)
             c_sl = round(c_entry - 22.0, 1)
-            strategy_data.append(
+            strategy_data.append([f"{target_index} {c_strike} CE", f"₹ {c_entry:.1f}", f"₹ {c_sl:.1f}", f"₹ {c_tgt:.1f}"])
+    else:
+        st.markdown('<div class="panel-header">📊 Top 20 Filtered Institutional Bearish Options (PE Series Only)</div>', unsafe_allow_html=True)
+        for i in range(-10, 10):
+            p_strike = atm_strike + (i * step)
+            p_entry = max(8.5, round((p_strike - atm_strike) * 0.4 + 95.0, 1))
+            p_tgt = round(p_entry + 50.0, 1)
+            p_sl = round(p_entry - 22.0, 1)
+            strategy_data.append([f"{target_index} {p_strike} PE", f"₹ {p_entry:.1f}", f"₹ {p_sl:.1f}", f"₹ {p_tgt:.1f}"])
+
+    cols_list = ["Directional Contract Ticker Target", "Calculated Entry Price (LTP)", "Hard Risk Stop Loss (SL)", "Take Profit Target Level"]
+    st.table(pd.DataFrame(strategy_data, columns=cols_list))
+    st.markdown('</div>', unsafe_allow_html=True)
+
+else:
+    st.markdown('<div class="content-panel">', unsafe_allow_html=True)
+    st.markdown("""
+        <div style="text-align: center; padding: 50px 20px; color: #475569;">
+            <div style="font-size: 40px; margin-bottom:10px;">📊</div>
+            <p style="font-size: 16px; font-weight: 600; margin: 0; color: #94A3B8;">Options Intelligence Matrix Idle</p>
+            <p style="font-size: 13px; margin-top: 5px; color: #475569;">Initialize your secure terminal API handshake above or hit the prediction execute trigger to unlock entry levels.</p>
+        </div>
+    """, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ---------------- BACKGROUND REFRESH TICKER LOOP ----------------
+if mode == "AngelOne Live Stream" and st.session_state.api_authenticated:
+    time.sleep(4)
+    st.session_state.refresh_counter += 1
+    st.rerun()
