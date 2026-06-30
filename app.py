@@ -4,7 +4,7 @@ import joblib
 import pandas as pd
 import os
 import pyotp
-from SmartApi import SmartConnect
+from smartapi import SmartConnect
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -199,7 +199,6 @@ if mode == "AngelOne Live Stream":
                 api_authenticated = True
                 feed_status_message = "AngelOne Native Live"
                 
-                # Fetching index parameters via SDK layout variables
                 token_map = {"NIFTY 50": "26000", "SENSEX": "1", "BANKEX": "12"}
                 exchange_map = {"NIFTY 50": "NSE", "SENSEX": "BSE", "BANKEX": "BSE"}
                 trading_symbol_map = {"NIFTY 50": "Nifty 50", "SENSEX": "SENSEX", "BANKEX": "BANKEX"}
