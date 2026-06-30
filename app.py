@@ -231,19 +231,19 @@ st.markdown("<p style='color:#94A3B8; font-size:14px; font-weight:500; margin-bo
 target_index = st.selectbox("Select Index", ["NIFTY 50", "SENSEX", "BANKEX"], label_visibility="collapsed")
 
 st.markdown("<p style='color:#94A3B8; font-size:14px; font-weight:500; margin-top:12px; margin-bottom:4px;'>Data Intake Strategy</p>", unsafe_allow_html=True)
-mode = st.radio("Select Input Mode", ["Manual Input", "AngelOne Live Stream"], horizontal=True)
+mode = st.radio("Select Input Mode", ["Manual Input", "Real-Time Cloud Feed"], horizontal=True)
 
 open_price, high_price, low_price, close_price, volume, previous_return = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 api_authenticated = False
-feed_status_message = "Awaiting Gateway Auth"
+feed_status_message = "Awaiting Live Stream Initialization"
 
-# --- BACKUP FALLBACK API (Yahoo Finance public query protocol) ---
-def fetch_backup_ticks(index_name):
+# --- OPEN STABLE FINANCIAL API PROTOCOL ---
+def fetch_live_market_ticks(index_name):
     ticker_map = {"NIFTY 50": "^NSEI", "SENSEX": "^BSESN", "BANKEX": "BSE-BANK.BO"}
     ticker = ticker_map.get(index_name, "^NSEI")
     try:
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=1d"
-        headers = {"User-Agent": "Mozilla/5.0"}
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
         res = requests.get(url, headers=headers, timeout=5).json()
         result = res['chart']['result'][0]
         indicators = result['indicators']['quote'][0]
@@ -258,96 +258,13 @@ def fetch_backup_ticks(index_name):
     except Exception:
         return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, False
 
-# ---------------- NATIVE ANGEL ONE REST API ROUTING ----------------
-if mode == "AngelOne Live Stream":
-    st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="panel-header">🔐 Secure SmartAPI Gateway Terminal</div>', unsafe_allow_html=True)
-    
-    ak_col, cc_col, pw_col, to_col = st.columns(4)
-    with ak_col:
-        API_KEY = st.text_input("SmartAPI Key", type="password")
-    with cc_col:
-        CLIENT_CODE = st.text_input("Client ID / Code")
-    with pw_col:
-        PASSWORD = st.text_input("Mpin / Password", type="password")
-    with to_col:
-        TOTP_SECRET = st.text_input("TOTP Token String", type="password")
-        
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    if API_KEY and CLIENT_CODE and PASSWORD and TOTP_SECRET:
-        try:
-            totp_challenge = pyotp.TOTP(TOTP_SECRET).now()
-            auth_url = "https://apiconnect.angelone.in/api/v1/user/auth"
-            headers = {
-                "Content-Type": "application/json",
-                "X-PrivateKey": API_KEY,
-                "Accept": "application/json"
-            }
-            auth_payload = {
-                "clientcode": CLIENT_CODE,
-                "password": PASSWORD,
-                "totp": totp_challenge
-            }
-            
-            proxies = {}
-            if "PROXY_URL" in os.environ:
-                proxies = {"http": os.environ["PROXY_URL"], "https": os.environ["PROXY_URL"]}
-                
-            raw_auth_res = requests.post(auth_url, json=auth_payload, headers=headers, proxies=proxies, timeout=6)
-            
-            # If AngelOne blocks the IP, execute backup fallback protocol automatically
-            if not raw_auth_res.text or not raw_auth_res.text.strip().startswith("{"):
-                st.warning("⚠️ AngelOne WAF firewall intercepted connection. Routing via backup Cloud Feed...")
-                open_price, high_price, low_price, close_price, volume, previous_return, api_authenticated = fetch_backup_ticks(target_index)
-                feed_status_message = "Backup Live Feed" if api_authenticated else "Auth Blocked"
-            else:
-                response = raw_auth_res.json()
-                if response.get('status') == True and 'data' in response:
-                    jwt_token = response['data']['jwtToken']
-                    token_map = {"NIFTY 50": "26000", "SENSEX": "1", "BANKEX": "12"}
-                    exchange_map = {"NIFTY 50": "NSE", "SENSEX": "BSE", "BANKEX": "BSE"}
-                    
-                    market_url = "https://apiconnect.angelone.in/rest/secure/angelbroking/market/data/v1/getMarketData"
-                    market_headers = {
-                        "Content-Type": "application/json",
-                        "X-PrivateKey": API_KEY,
-                        "X-JWTToken": f"Bearer {jwt_token}",
-                        "Accept": "application/json"
-                    }
-                    market_payload = {
-                        "mode": "OHLC",
-                        "exchangeTokens": {exchange_map[target_index]: [token_map[target_index]]}
-                    }
-                    
-                    raw_market_res = requests.post(market_url, json=market_payload, headers=market_headers, proxies=proxies, timeout=6)
-                    
-                    if not raw_market_res.text or not raw_market_res.text.strip().startswith("{"):
-                        open_price, high_price, low_price, close_price, volume, previous_return, api_authenticated = fetch_backup_ticks(target_index)
-                        feed_status_message = "Backup Live Feed"
-                    else:
-                        market_res = raw_market_res.json()
-                        if market_res.get('status') == True and 'data' in market_res and market_res['data']['fetched']:
-                            live_ticks = market_res['data']['fetched'][0]
-                            open_price = float(live_ticks.get('open', 0))
-                            high_price = float(live_ticks.get('high', 0))
-                            low_price = float(live_ticks.get('low', 0))
-                            close_price = float(live_ticks.get('ltp', 0))
-                            volume = float(live_ticks.get('volume', 0))
-                            previous_return = ((close_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
-                            api_authenticated = True
-                            feed_status_message = "AngelOne Live"
-                        else:
-                            open_price, high_price, low_price, close_price, volume, previous_return, api_authenticated = fetch_backup_ticks(target_index)
-                            feed_status_message = "Backup Live Feed"
-                else:
-                    open_price, high_price, low_price, close_price, volume, previous_return, api_authenticated = fetch_backup_ticks(target_index)
-                    feed_status_message = "Backup Live Feed"
-        except Exception:
-            open_price, high_price, low_price, close_price, volume, previous_return, api_authenticated = fetch_backup_ticks(target_index)
-            feed_status_message = "Backup Live Feed"
+# ---------------- AUTOMATIC CLOUD STREAM ROUTING ----------------
+if mode == "Real-Time Cloud Feed":
+    open_price, high_price, low_price, close_price, volume, previous_return, api_authenticated = fetch_live_market_ticks(target_index)
+    if api_authenticated:
+        feed_status_message = "Live Global Matrix Feed Connected"
     else:
-        st.info("Awaiting input keys inside the Secure Gateway panel above to pull real-time data ticks.")
+        st.error("Temporary downstream sync error. Please try clicking or changing the index selection target.")
 
 # ---------------- METRICS HUD STATUS DISPLAY ----------------
 m1, m2, m3, m4 = st.columns([1, 1, 1, 1])
@@ -361,8 +278,8 @@ metric_css = """
 st.markdown(metric_css, unsafe_allow_html=True)
 
 m1.metric(label="📅 Target Index", value=target_index)
-m2.metric(label="🕒 Feed Source", value=feed_status_message if mode == "AngelOne Live Stream" else "Manual Matrix")
-m3.metric(label="📊 Pipeline Status", value="Tick Live" if api_authenticated else "Awaiting Data")
+m2.metric(label="🕒 Feed Source", value=feed_status_message if mode == "Real-Time Cloud Feed" else "Manual Matrix")
+m3.metric(label="📊 Pipeline Status", value="Tick Live" if api_authenticated else "Awaiting Tuning")
 m4.metric(label="⚡ Engine Core", value="ML Inference Ready" if model else "Simulated Mode")
 
 st.write("")
@@ -374,14 +291,14 @@ st.markdown(f'<div class="panel-header">📊 Dynamic Matrix Tuning: {target_inde
 c1, c2 = st.columns(2, gap="medium")
 
 with c1:
-    open_price = st.number_input("Open Price (₹)", format="%.2f", value=open_price, disabled=(mode == "AngelOne Live Stream" and api_authenticated))
-    low_price = st.number_input("Low Price (₹)", format="%.2f", value=low_price, disabled=(mode == "AngelOne Live Stream" and api_authenticated))
-    volume = st.number_input("Trading Volume", format="%.2f", value=volume, disabled=(mode == "AngelOne Live Stream" and api_authenticated))
+    open_price = st.number_input("Open Price (₹)", format="%.2f", value=open_price, disabled=(mode == "Real-Time Cloud Feed"))
+    low_price = st.number_input("Low Price (₹)", format="%.2f", value=low_price, disabled=(mode == "Real-Time Cloud Feed"))
+    volume = st.number_input("Trading Volume", format="%.2f", value=volume, disabled=(mode == "Real-Time Cloud Feed"))
 
 with c2:
-    high_price = st.number_input("High Price (₹)", format="%.2f", value=high_price, disabled=(mode == "AngelOne Live Stream" and api_authenticated))
-    close_price = st.number_input("Close Price (₹)", format="%.2f", value=close_price, disabled=(mode == "AngelOne Live Stream" and api_authenticated))
-    previous_return = st.number_input("Previous Session Return (%)", format="%.2f", value=previous_return, disabled=(mode == "AngelOne Live Stream" and api_authenticated))
+    high_price = st.number_input("High Price (₹)", format="%.2f", value=high_price, disabled=(mode == "Real-Time Cloud Feed"))
+    close_price = st.number_input("Close Price (₹)", format="%.2f", value=close_price, disabled=(mode == "Real-Time Cloud Feed"))
+    previous_return = st.number_input("Previous Session Return (%)", format="%.2f", value=previous_return, disabled=(mode == "Real-Time Cloud Feed"))
 
 predict_clicked = st.button("🚀 EXECUTE PREDICTION MATRIX")
 st.markdown('</div>', unsafe_allow_html=True)
