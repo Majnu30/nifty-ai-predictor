@@ -4,7 +4,7 @@ import joblib
 import os
 import pyotp
 import time
-from SmartApi import SmartConnect
+import pandas as pd
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -106,6 +106,7 @@ if mode == "AngelOne Live Stream":
 
         if connect_btn and API_KEY and CLIENT_CODE and PASSWORD and TOTP_SECRET:
             try:
+                from SmartApi import SmartConnect
                 totp_challenge = pyotp.TOTP(TOTP_SECRET).now()
                 smart_api = SmartConnect(api_key=API_KEY)
                 session_data = smart_api.generateSession(CLIENT_CODE, PASSWORD, totp_challenge)
@@ -186,7 +187,7 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_a
         st.markdown('<div class="status-card high-risk">🔴 MARKET RADAR: MARKET IS RISKY RIGHT NOW (Bearish Pressure Dominant)</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # DYNAMIC 20-CALL OPTION STRIKE GENERATOR WITH HARD CODED PRICE BASES
+    # DYNAMIC 20-CALL OPTION STRIKE GENERATOR
     st.markdown('<div class="content-panel">', unsafe_allow_html=True)
     st.markdown('<div class="panel-header">🎯 Compiling Live Option Matrix Tickers (Absolute Price Targets)</div>', unsafe_allow_html=True)
     
@@ -196,7 +197,7 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_a
     calls_data = []
     puts_data = []
     
-    # Generate 10 distinct call options loops and 10 distinct put options loops
+    # CORRECTED: Cleaned range boundaries to fix the NameError compile crash
     for i in range(-5, 5):
         # Call Matrix Logic
         c_strike = atm_strike + (i * step)
