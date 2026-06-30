@@ -197,7 +197,7 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_a
     puts_data = []
     
     # Generate 10 distinct call options loops and 10 distinct put options loops
-    for i in range(-5, i + 5):
+    for i in range(-5, 5):
         # Call Matrix Logic
         c_strike = atm_strike + (i * step)
         c_entry = max(15.0, round((atm_strike - c_strike) * 0.4 + 95.0, 1))
