@@ -8,7 +8,7 @@ from SmartApi import SmartConnect
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
-    page_title="NIFTY AI Predictor",
+    page_title="MAJNU AI Predictor",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -51,6 +51,9 @@ st.markdown("""
     .good-to-go { background: rgba(16, 185, 129, 0.1); border: 1px solid #10B981; color: #10B981; }
     .caution { background: rgba(245, 158, 11, 0.1); border: 1px solid #F59E0B; color: #F59E0B; }
     .high-risk { background: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444; color: #EF4444; }
+    
+    /* Trade Intel Box */
+    .intel-card { background: #0B1528; border: 1px dashed #2563EB; padding: 20px; border-radius: 12px; margin-top: 15px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -71,7 +74,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ---------------- INDEX SELECTION (WITH RESET TRIGGER) ----------------
+# ---------------- INDEX SELECTION ----------------
 target_index = st.selectbox(
     "Select Target Market Index", 
     ["NIFTY 50", "SENSEX", "BANKEX"], 
@@ -149,7 +152,6 @@ m4.metric(label="⚡ Engine Core", value="ML Inference Ready" if model else "Sim
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
 st.markdown('<div class="panel-header">🎯 Live Price Action Evaluation</div>', unsafe_allow_html=True)
 
-# Single input widget synced dynamically to chosen asset
 live_price_input = st.number_input(
     f"Current Price Matrix Target ({target_index})", 
     format="%.2f", 
@@ -165,8 +167,8 @@ st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
 st.markdown('<div class="panel-header">📊 AI Inference Framework Response</div>', unsafe_allow_html=True)
 
+# Auto-compute execution values on page load if streaming is active
 if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_authenticated):
-    # Safe 6-column dimensional mapping framework format
     data_array = np.array([[st.session_state.baseline_open, live_price_input, live_price_input, live_price_input, 120000.0, 0.1]])
     
     if model is not None:
@@ -174,26 +176,48 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_a
         probability = model.predict_proba(data_array)[0]
         confidence = probability[1] * 100 if prediction == 1 else probability[0] * 100
     else:
-        # Balanced baseline calculation standard fallback
         prediction = 1 if live_price_input >= st.session_state.baseline_open else 0
         confidence = 84.50
     
-    # OUTPUT 1: AI Directional Signals
+    # 1. Directional Prediction Output
     if prediction == 1:
         st.success(f"📈 PROJECTION VECTOR: BULLISH (UP) - Live Intraday Confidence: {confidence:.2f}%")
     else:
         st.error(f"📉 PROJECTION VECTOR: BEARISH (DOWN) - Live Intraday Confidence: {confidence:.2f}%")
         
-    # OUTPUT 2: Strategic Risk Metrics ("Good to Go" / "Risky")
-    st.write("")
+    # 2. Dynamic Risk Meter Advice
     if prediction == 1 and confidence >= 85.0:
         st.markdown('<div class="status-card good-to-go">🟢 MARKET RADAR: GOOD TO GO (Strong Bullish Momentum Detected)</div>', unsafe_allow_html=True)
     elif prediction == 0 and confidence >= 80.0:
-        st.markdown('<div class="status-card high-risk">🔴 MARKET RADAR: HIGH RISK / STAY OUT (Heavy Resistance Building Up)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="status-card high-risk">🔴 MARKET RADAR: MARKET IS RISKY RIGHT NOW (Heavy Bearish Resistance Building)</div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="status-card caution">🟡 MARKET RADAR: CAUTION / RISKY RIGHT NOW (Volatile Range-Bound Action)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="status-card caution">🟡 MARKET RADAR: CAUTION (Volatile Range-Bound Action / Trade Lightly)</div>', unsafe_allow_html=True)
+
+    # 3. OPTIONS STRIKE PRICE INTEL GENERATOR
+    st.markdown('<div class="intel-card">', unsafe_allow_html=True)
+    st.markdown("<h4 style='margin:0 0 10px 0; color:#3B82F6;'>🎯 Smart Options Intelligence</h4>", unsafe_allow_html=True)
+    
+    # Rounding current price to the nearest 100-interval step for derivative suggestions
+    base_strike = round(live_price_input / 100) * 100
+    
+    if prediction == 1:
+        st.write(f"💡 **Trading Intel:** Since the vector is shifting **BULLISH**, looking at Call Options (**CE**) could be useful. The closest liquid targets are:")
+        st.code(f"👉 {target_index} {base_strike} CE (At-The-Money)\n👉 {target_index} {base_strike + 100} CE (In-The-Money/Aggressive)")
+    else:
+        st.write(f"💡 **Trading Intel:** Since the vector is shifting **BEARISH**, looking at Put Options (**PE**) could be useful. The closest liquid targets are:")
+        st.code(f"👉 {target_index} {base_strike} PE (At-The-Money)\n👉 {target_index} {base_strike - 100} PE (In-The-Money/Defensive)")
+        
+    st.markdown('</div>', unsafe_allow_html=True)
+
 else:
-    st.info("System Ready. Establish terminal connection or execute parameters to read risk-mitigation metrics.")
+    # UPDATED: Clean, clear baseline greeting that removes the old complex tech jargon
+    st.markdown("""
+        <div style="text-align: center; padding: 40px 20px; color: #64748B;">
+            <p style="font-size: 18px; font-weight: 500; margin: 0;">📊 Engine Awaiting Data Input</p>
+            <p style="font-size: 14px; margin-top: 5px;">Connect your AngelOne Live Stream or click 'Execute' above to display live risk analytics and option strike suggestions.</p>
+        </div>
+    """, unsafe_allow_html=True)
+
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- BACKGROUND REFRESH TICKER LOOP ----------------
