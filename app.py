@@ -6,6 +6,7 @@ import os
 import time
 import requests
 import pyotp
+import json
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
@@ -272,12 +273,13 @@ if mode == "AngelOne Live Stream":
             if "PROXY_URL" in os.environ:
                 proxies = {"http": os.environ["PROXY_URL"], "https": os.environ["PROXY_URL"]}
                 
-            # Safely request auth without instantly parsing JSON
-            raw_auth_res = requests.post(auth_url, json=auth_payload, headers=headers, proxies=proxies)
+            # Safely fetch raw token request without instant JSON parsing conversion
+            raw_auth_res = requests.post(auth_url, json=auth_payload, headers=headers, proxies=proxies, timeout=10)
             
-            if raw_auth_res.status_code != 200:
-                st.error(f"🔴 Authentication Server error! HTTP Status Code: {raw_auth_res.status_code}")
-                st.info("AngelOne might be blocking Streamlit Cloud's hosting IP address range.")
+            # Check if server payload returned HTML firewall errors or empty lines
+            if not raw_auth_res.text or not raw_auth_res.text.strip().startswith("{"):
+                st.error("🔴 AngelOne API firewall blocking network handshake configuration.")
+                st.info("Streamlit hosting cloud environments are being intercepted. Switch to 'Manual Input' or add a Static Proxy URL to secrets.")
             else:
                 response = raw_auth_res.json()
                 
@@ -302,15 +304,14 @@ if mode == "AngelOne Live Stream":
                         }
                     }
                     
-                    # Safely request market data without instantly parsing JSON
-                    raw_market_res = requests.post(market_url, json=market_payload, headers=market_headers, proxies=proxies)
+                    raw_market_res = requests.post(market_url, json=market_payload, headers=market_headers, proxies=proxies, timeout=10)
                     
-                    if raw_market_res.status_code != 200:
-                        st.error(f"🔴 Market Data Server error! HTTP Status Code: {raw_market_res.status_code}")
+                    if not raw_market_res.text or not raw_market_res.text.strip().startswith("{"):
+                        st.error("🔴 Market feed endpoint intercepted or dropped connection.")
                     else:
                         market_res = raw_market_res.json()
                         
-                        if market_res.get('status') == True and 'data' in market_res and 'fetched' in market_res['data']:
+                        if market_res.get('status') == True and 'data' in market_res and 'fetched' in market_res['data'] and market_res['data']['fetched']:
                             live_ticks = market_res['data']['fetched'][0]
                             open_price = float(live_ticks.get('open', 0))
                             high_price = float(live_ticks.get('high', 0))
@@ -321,7 +322,7 @@ if mode == "AngelOne Live Stream":
                         else:
                             st.error("Market API endpoint returned data layout verification anomalies.")
                 else:
-                    st.error(f"Gateway Access Denied: {response.get('message', 'Invalid response')}")
+                    st.error(f"Gateway Access Denied: {response.get('message', 'Invalid response template setup')}")
         except Exception as api_err:
             st.error(f"Network handshake processing timeout: {api_err}")
     else:
