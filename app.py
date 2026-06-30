@@ -136,17 +136,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- SAFE HIGH-SPEED MODEL LOADING ----------------
-@st.cache_resource
-def load_ml_model():
-    try:
-        for path in ["models/nifty_model.pkl", "nifty_model.pkl"]:
-            if os.path.exists(path): return joblib.load(path)
-    except Exception: pass  
-    return None
-
-model = load_ml_model()
-
 # ---------------- BRAND TITLE BANNER ----------------
 st.markdown("""
     <div style="background: linear-gradient(135deg, rgba(4,10,24,0.8) 0%, rgba(6,19,44,0.8) 100%); border: 1px solid rgba(255,255,255,0.03); border-radius: 16px; padding: 25px 35px; margin-bottom: 25px; display:flex; justify-content:space-between; align-items:center;">
@@ -289,3 +278,28 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_a
                     <h2 style='color:#EF4444; margin:5px 0 0 0; font-size:26px;'>📉 BEARISH PATTERN</h2>
                     <p style='color:#94A3B8; font-size:14px; margin-top:5px;'>Confidence Probability: <b>{confidence:.2f}%</b></p>
                 </div>
+            """, unsafe_allow_html=True)
+            
+    with out_col2:
+        if prediction == 1:
+            st.markdown('<div class="status-card good-to-go" style="height:103px; display:flex; align-items:center; justify-content:center;">🟢 RISK MONITOR: GOOD TO GO (Enter Long Momentum)</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="status-card high-risk" style="height:103px; display:flex; align-items:center; justify-content:center;">🔴 RISK MONITOR: MARKET IS RISKY RIGHT NOW (Stay Defended / Buy Puts)</div>', unsafe_allow_html=True)
+            
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # HIGH END INTERACTIVE SINGLE DIRECTION STRATEGY BLOCK
+    st.markdown('<div class="content-panel">', unsafe_allow_html=True)
+    
+    step = st.session_state.strike_step
+    atm_strike = round(live_price_input / step) * step
+    strategy_data = []
+    
+    if prediction == 1:
+        st.markdown('<div class="panel-header">📊 Top 20 Filtered Institutional Bullish Options (CE Series Only)</div>', unsafe_allow_html=True)
+        for i in range(-10, 10):
+            c_strike = atm_strike + (i * step)
+            c_entry = max(8.5, round((atm_strike - c_strike) * 0.4 + 95.0, 1))
+            c_tgt = round(c_entry + 50.0, 1)
+            c_sl = round(c_entry - 22.0, 1)
+            strategy_data.append(
