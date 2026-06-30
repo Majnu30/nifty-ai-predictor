@@ -15,9 +15,15 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ---------------- AUTO REFRESH STREAM MATRIX ----------------
-if "refresh_counter" not in st.session_state:
-    st.session_state.refresh_counter = 0
+# ---------------- PERSIST INTRADAY STORAGE VARIABLES ----------------
+# Using session_state fixes the blinking/flickering issue entirely during live stream updates
+if "open" not in st.session_state: st.session_state.open = 0.0
+if "high" not in st.session_state: st.session_state.high = 0.0
+if "low" not in st.session_state: st.session_state.low = 0.0
+if "close" not in st.session_state: st.session_state.close = 0.0
+if "volume" not in st.session_state: st.session_state.volume = 0.0
+if "prev_return" not in st.session_state: st.session_state.prev_return = 0.0
+if "refresh_counter" not in st.session_state: st.session_state.refresh_counter = 0
 
 # ---------------- THEME & RESPONSIVE UI CSS ----------------
 st.markdown("""
@@ -33,10 +39,6 @@ st.markdown("""
     }
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    section[data-testid="stSidebar"] {
-        background-color: #050B18 !important;
-        border-right: 1px solid #111C34;
-    }
     .content-panel {
         background: #070F21;
         border: 1px solid #111E3B;
@@ -44,16 +46,10 @@ st.markdown("""
         padding: 20px;
         margin-bottom: 20px;
     }
-    @media (min-width: 768px) {
-        .content-panel { padding: 30px; }
-    }
     .panel-header {
         font-size: 18px;
         font-weight: 600;
         color: #FFFFFF;
-        display: flex;
-        align-items: center;
-        gap: 10px;
         margin-bottom: 20px;
     }
     label[data-testid="stWidgetLabel"] p {
@@ -77,12 +73,7 @@ st.markdown("""
         letter-spacing: 1px;
         background: linear-gradient(90deg, #2563EB 0%, #7C3AED 100%);
         box-shadow: 0 4px 15px rgba(37, 99, 235, 0.25);
-        transition: all 0.3s ease;
         margin-top: 10px;
-    }
-    div.stButton > button:hover {
-        background: linear-gradient(90deg, #1D4ED8 0%, #6D28D9 100%);
-        transform: translateY(-1px);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -104,7 +95,7 @@ model = load_ml_model()
 st.markdown("""
     <div style="background: linear-gradient(135deg, #040A18 0%, #06132C 100%); border: 1px solid #111E3B; border-radius: 16px; padding: 30px; margin-bottom: 20px;">
         <h1 style="font-size: 36px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">
-            MARKET <span style="color: #3B82F6;">AI</span> INTRADAY PREDICTOR
+            MARKET <span style="color: #3B82F6;">AI</span> TRACKING VECTOR
         </h1>
     </div>
     """, unsafe_allow_html=True)
@@ -113,8 +104,6 @@ st.markdown("""
 target_index = st.selectbox("Select Target Market Index", ["NIFTY 50", "SENSEX", "BANKEX"])
 mode = st.radio("Select Input Mode", ["Manual Input", "AngelOne Live Stream"], horizontal=True)
 
-# Instantiating base matrix values
-open_price, high_price, low_price, close_price, volume, previous_return = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 api_authenticated = False
 feed_status_message = "Awaiting Live Stream Initialization"
 
@@ -125,13 +114,13 @@ if mode == "AngelOne Live Stream":
     
     ak_col, cc_col, pw_col, to_col = st.columns(4)
     with ak_col:
-        API_KEY = st.text_input("SmartAPI Key", type="password")
+        API_KEY = st.text_input("SmartAPI Key", type="password", key="api_key_widget")
     with cc_col:
-        CLIENT_CODE = st.text_input("Client ID / Code")
+        CLIENT_CODE = st.text_input("Client ID / Code", key="client_code_widget")
     with pw_col:
-        PASSWORD = st.text_input("Mpin / Password", type="password")
+        PASSWORD = st.text_input("Mpin / Password", type="password", key="password_widget")
     with to_col:
-        TOTP_SECRET = st.text_input("TOTP Token String", type="password")
+        TOTP_SECRET = st.text_input("TOTP Token String", type="password", key="totp_widget")
         
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -154,13 +143,13 @@ if mode == "AngelOne Live Stream":
                 if market_data.get('status') == True and 'data' in market_data and 'fetched' in market_data['data'] and market_data['data']['fetched']:
                     tick = market_data['data']['fetched'][0]
                     
-                    # CORRECTED: Explicitly mapping all 6 vectors from AngelOne response
-                    close_price = float(tick.get('ltp', 0))
-                    open_price = float(tick.get('open', 0))
-                    high_price = float(tick.get('high', 0))
-                    low_price = float(tick.get('low', 0))
-                    volume = float(tick.get('tradeVolume', tick.get('volume', 0)))
-                    previous_return = float(tick.get('percentChange', 0))
+                    # Store trackable items straight into state to completely stop frontend blinking
+                    st.session_state.close = float(tick.get('ltp', 0))
+                    st.session_state.open = float(tick.get('open', 0))
+                    st.session_state.high = float(tick.get('high', 0))
+                    st.session_state.low = float(tick.get('low', 0))
+                    st.session_state.volume = float(tick.get('tradeVolume', tick.get('volume', 0)))
+                    st.session_state.prev_return = float(tick.get('percentChange', 0))
                 else:
                     st.error("Intraday parsing mismatch. Ensure market hours are active or use Manual tuning.")
             else:
@@ -181,13 +170,13 @@ st.markdown(f'<div class="panel-header">📊 Dynamic Matrix Tuning: {target_inde
 
 c1, c2 = st.columns(2, gap="medium")
 with c1:
-    open_price = st.number_input("Open Price (₹)", format="%.2f", value=open_price, disabled=(mode == "AngelOne Live Stream"))
-    low_price = st.number_input("Low Price (₹)", format="%.2f", value=low_price, disabled=(mode == "AngelOne Live Stream"))
-    volume = st.number_input("Trading Volume", format="%.2f", value=volume, disabled=(mode == "AngelOne Live Stream"))
+    open_val = st.number_input("Open Price (₹)", format="%.2f", value=st.session_state.open, disabled=(mode == "AngelOne Live Stream"), key="open_inp")
+    low_val = st.number_input("Low Price (₹)", format="%.2f", value=st.session_state.low, disabled=(mode == "AngelOne Live Stream"), key="low_inp")
+    vol_val = st.number_input("Trading Volume", format="%.2f", value=st.session_state.volume, disabled=(mode == "AngelOne Live Stream"), key="vol_inp")
 with c2:
-    high_price = st.number_input("High Price (₹)", format="%.2f", value=high_price, disabled=(mode == "AngelOne Live Stream"))
-    close_price = st.number_input("Close Price (₹)", format="%.2f", value=close_price, disabled=(mode == "AngelOne Live Stream"))
-    previous_return = st.number_input("Previous Session Return (%)", format="%.2f", value=previous_return, disabled=(mode == "AngelOne Live Stream"))
+    high_val = st.number_input("High Price (₹)", format="%.2f", value=st.session_state.high, disabled=(mode == "AngelOne Live Stream"), key="high_inp")
+    close_val = st.number_input("Close Price (₹)", format="%.2f", value=st.session_state.close, disabled=(mode == "AngelOne Live Stream"), key="close_inp")
+    ret_val = st.number_input("Previous Session Return (%)", format="%.2f", value=st.session_state.prev_return, disabled=(mode == "AngelOne Live Stream"), key="ret_inp")
 
 predict_clicked = st.button("🚀 EXECUTE PREDICTION MATRIX")
 st.markdown('</div>', unsafe_allow_html=True)
@@ -195,18 +184,17 @@ st.markdown('</div>', unsafe_allow_html=True)
 # ---------------- INFERENCE CALCULATION BLOCK ----------------
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
 
-# Rule: Always run prediction on live data loop OR on button click
+# Track and run prediction on either button click OR real-time pipeline feed
 if predict_clicked or (mode == "AngelOne Live Stream" and api_authenticated):
-    # CORRECTED: Building structured array using all 6 real-time data inputs
-    data_array = np.array([[open_price, high_price, low_price, close_price, volume, previous_return]])
+    # Pipe ALL 6 features directly into the active ML engine
+    data_array = np.array([[open_val, high_val, low_val, close_val, vol_val, ret_val]])
     
     if model is not None:
         prediction = model.predict(data_array)[0]
         probability = model.predict_proba(data_array)[0]
         confidence = probability[1] * 100 if prediction == 1 else probability[0] * 100
     else:
-        # Fallback simulation logic if nifty_model.pkl is missing
-        prediction = 1 if close_price >= open_price else 0
+        prediction = 1 if close_val >= open_val else 0
         confidence = 85.5 if prediction == 1 else 82.3
     
     if prediction == 1:
