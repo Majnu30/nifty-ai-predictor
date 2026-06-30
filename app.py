@@ -252,7 +252,6 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.get('
         probability = model.predict_proba(data_array)[0]
         confidence = probability[1] * 100 if prediction == 1 else probability[0] * 100
     else:
-        # Fixed line 132 attribute lookup crash via variable assignment reference mapping
         prediction = 1 if live_price_input >= baseline_open_display else 0
         confidence = 84.50
         
@@ -330,4 +329,36 @@ st.markdown(
     """
     <div class="footer-panel">
         <div>
-            <p style="color: #475569; font-size: 11px; font-weight:
+            <p style="color: #475569; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin: 0 0 5px 0;">
+                Designed & Engineered By
+            </p>
+            <h1 style="
+                font-size: clamp(38px, 5vw, 52px);
+                font-weight: 900;
+                margin: 0;
+                background: linear-gradient(90deg, #3B82F6 0%, #C084FC 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                letter-spacing: 6px;
+                line-height: 1;
+            ">
+                MAJNU
+            </h1>
+            <p style="color: #3B82F6; font-size: 13px; margin-top: 10px; font-weight: 500;">
+                Code. Create. Conquer.
+            </p>
+        </div>
+        <div style="display: flex; gap: 20px; align-items: center; justify-content: center; margin-top: 20px; opacity: 0.6; font-size: 14px;">
+            <span style="color: #64748B; cursor: pointer;">💻 GitHub Terminal</span>
+            <span style="color: #64748B; cursor: pointer;">🌐 Institutional API Link</span>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+# ---------------- BACKGROUND REFRESH TICKER LOOP ----------------
+if mode == "AngelOne Live Stream" and st.session_state.get('api_authenticated'):
+    time.sleep(4)
+    st.session_state.refresh_counter += 1
+    st.rerun()
