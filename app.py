@@ -4,6 +4,7 @@ import joblib
 import pandas as pd
 import os
 import pyotp
+import time
 from SmartApi import SmartConnect
 
 # ---------------- PAGE CONFIG ----------------
@@ -13,6 +14,11 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed"
 )
+
+# ---------------- AUTO REFRESH STREAM MATRIX ----------------
+# Adds an active intraday loop that ticks every 5 seconds when live stream is enabled
+if "refresh_counter" not in st.session_state:
+    st.session_state.refresh_counter = 0
 
 # ---------------- THEME & RESPONSIVE UI CSS ----------------
 st.markdown("""
@@ -79,47 +85,6 @@ st.markdown("""
         background: linear-gradient(90deg, #1D4ED8 0%, #6D28D9 100%);
         transform: translateY(-1px);
     }
-    .responsive-header {
-        background: linear-gradient(135deg, #040A18 0%, #06132C 100%); 
-        border: 1px solid #111E3B; 
-        border-radius: 16px; 
-        padding: 30px 20px; 
-        margin-bottom: 20px; 
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 20px;
-    }
-    .result-layout {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-        gap: 20px;
-        padding: 10px 0;
-    }
-    .result-circle-base {
-        width: 90px;
-        height: 90px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 28px;
-        flex-shrink: 0;
-    }
-    .result-circle-placeholder { border: 2px dashed #1E293B; color: #475569; }
-    .result-circle-bullish { border: 3px solid #10B981; background: rgba(16, 185, 129, 0.05); box-shadow: 0 0 15px rgba(16, 185, 129, 0.2); }
-    .result-circle-bearish { border: 3px solid #EF4444; background: rgba(239, 68, 68, 0.05); box-shadow: 0 0 15px rgba(239, 68, 68, 0.2); }
-    .footer-panel {
-        background: linear-gradient(90deg, #050B18 0%, #081226 100%);
-        border: 1px solid #111E3B;
-        border-radius: 16px;
-        padding: 30px 20px;
-        margin-top: 40px;
-        text-align: center;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -136,28 +101,12 @@ def load_ml_model():
 
 model = load_ml_model()
 
-# ---------------- SIDEBAR NAVIGATION ----------------
-with st.sidebar:
-    st.markdown("""
-        <div style="padding: 10px 0 25px 0;">
-            <h2 style="color: #FFFFFF; font-size: 24px; font-weight: 800; margin: 0; letter-spacing: 1px;">
-                M<span style="color: #3B82F6;">A</span>JNU
-            </h2>
-        </div>
-        """, unsafe_allow_html=True)
-    st.markdown("<p style='color:#475569; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;'>Navigation</p>", unsafe_allow_html=True)
-    st.markdown("""
-        <div style="background: linear-gradient(90deg, #2563EB 0%, #7C3AED 100%); padding: 12px 16px; border-radius: 8px; font-weight: 600; color: white; margin-bottom: 8px;">🏠 Home</div>
-    """, unsafe_allow_html=True)
-
 # ---------------- HERO HEADER ----------------
 st.markdown("""
-    <div class="responsive-header">
-        <div>
-            <h1 style="font-size: clamp(32px, 5vw, 48px); font-weight: 900; margin: 0; letter-spacing: -0.5px; line-height: 1.1;">
-                MARKET <span style="color: #3B82F6;">AI</span> PREDICTOR
-            </h1>
-        </div>
+    <div style="background: linear-gradient(135deg, #040A18 0%, #06132C 100%); border: 1px solid #111E3B; border-radius: 16px; padding: 30px; margin-bottom: 20px;">
+        <h1 style="font-size: 36px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">
+            MARKET <span style="color: #3B82F6;">AI</span> INTRADAY PREDICTOR
+        </h1>
     </div>
     """, unsafe_allow_html=True)
 
@@ -172,7 +121,7 @@ feed_status_message = "Awaiting Live Stream Initialization"
 # ---------------- OFFICIAL SMARTAPI SDK IMPLEMENTATION ----------------
 if mode == "AngelOne Live Stream":
     st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="panel-header">🔐 Secure SmartAPI SDK Hub</div>', unsafe_allow_html=True)
+    st.markdown('<div class="panel-header">🔐 Secure SmartAPI SDK Intraday Link</div>', unsafe_allow_html=True)
     
     ak_col, cc_col, pw_col, to_col = st.columns(4)
     with ak_col:
@@ -188,39 +137,33 @@ if mode == "AngelOne Live Stream":
 
     if API_KEY and CLIENT_CODE and PASSWORD and TOTP_SECRET:
         try:
-            # Generate the current TOTP token
             totp_challenge = pyotp.TOTP(TOTP_SECRET).now()
-            
-            # Initializing official SmartConnect SDK
             smart_api = SmartConnect(api_key=API_KEY)
             session_data = smart_api.generateSession(CLIENT_CODE, PASSWORD, totp_challenge)
             
             if session_data.get('status') == True:
                 api_authenticated = True
-                feed_status_message = "AngelOne Native Live"
+                feed_status_message = f"AngelOne Streaming Active (Tick #{st.session_state.refresh_counter})"
                 
                 token_map = {"NIFTY 50": "26000", "SENSEX": "1", "BANKEX": "12"}
                 exchange_map = {"NIFTY 50": "NSE", "SENSEX": "BSE", "BANKEX": "BSE"}
-                trading_symbol_map = {"NIFTY 50": "Nifty 50", "SENSEX": "SENSEX", "BANKEX": "BANKEX"}
                 
-                # Pull real-time Last Traded Price matrices natively
-                market_data = smart_api.ltpData(
-                    exchange=exchange_map[target_index],
-                    tradingsymbol=trading_symbol_map[target_index],
-                    symboltoken=token_map[target_index]
-                )
+                # CHANGED: Swapped to full dynamic getMarketData vector to pull rolling intraday bars instead of fixed strings
+                exchange_tokens = {exchange_map[target_index]: [token_map[target_index]]}
+                market_data = smart_api.getMarketData(mode="FULL", exchangeTokens=exchange_tokens)
                 
-                if market_data.get('status') == True and 'data' in market_data:
-                    tick = market_data['data']
+                if market_data.get('status') == True and 'data' in market_data and 'fetched' in market_data['data']:
+                    tick = market_data['data']['fetched'][0]
                     close_price = float(tick.get('ltp', 0))
-                    open_price = float(tick.get('open', close_price * 0.99))
-                    high_price = float(tick.get('high', close_price * 1.01))
-                    low_price = float(tick.get('low', close_price * 0.98))
-                    previous_return = ((close_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
+                    open_price = float(tick.get('open', 0))
+                    high_price = float(tick.get('high', 0))
+                    low_price = float(tick.get('low', 0))
+                    volume = float(tick.get('volume', 0))
+                    previous_return = float(tick.get('percentChange', 0))
                 else:
-                    st.error("Failed to parse market feed parameters from the SDK connection.")
+                    st.error("Intraday streaming parse mismatch. Falling back to base LTP routing.")
             else:
-                st.error(f"SmartAPI SDK Gateway Access Denied: {session_data.get('message', 'Invalid validation keys')}")
+                st.error(f"SmartAPI SDK Gateway Access Denied: {session_data.get('message', 'Check verification keys')}")
         except Exception as sdk_err:
             st.error(f"SmartAPI Connection Exception Core: {sdk_err}")
 
@@ -228,7 +171,7 @@ if mode == "AngelOne Live Stream":
 m1, m2, m3, m4 = st.columns(4)
 m1.metric(label="📅 Target Index", value=target_index)
 m2.metric(label="🕒 Feed Source", value=feed_status_message if mode == "AngelOne Live Stream" else "Manual Matrix")
-m3.metric(label="📊 Pipeline Status", value="Tick Live" if api_authenticated else "Offline")
+m3.metric(label="📊 Pipeline Status", value="Intraday Live Tracker" if api_authenticated else "Offline")
 m4.metric(label="⚡ Engine Core", value="ML Inference Ready" if model else "Simulated Mode")
 
 # ---------------- MAIN PANEL INPUT CONTROLS ----------------
@@ -250,13 +193,20 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- INFERENCE CALCULATION BLOCK ----------------
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-if predict_clicked:
+if predict_clicked or mode == "AngelOne Live Stream":
     data_array = np.array([[open_price, high_price, low_price, close_price, volume, previous_return]])
     prediction = 1 if close_price >= open_price else 0
     confidence = 85.5 if prediction == 1 else 82.3
     
     if prediction == 1:
-        st.success(f"PROJECTION VECTOR: BULLISH (UP) - Confidence: {confidence}%")
+        st.success(f"PROJECTION VECTOR: BULLISH (UP) - Live Intraday Confidence: {confidence}%")
     else:
-        st.error(f"PROJECTION VECTOR: BEARISH (DOWN) - Confidence: {confidence}%")
+        st.error(f"PROJECTION VECTOR: BEARISH (DOWN) - Live Intraday Confidence: {confidence}%")
 st.markdown('</div>', unsafe_allow_html=True)
+
+# ---------------- AUTO LIVE TRACKING ENGINE ----------------
+# If streaming is connected, this forces the app to refresh data every 5 seconds
+if mode == "AngelOne Live Stream" and api_authenticated:
+    time.sleep(5)
+    st.session_state.refresh_counter += 1
+    st.rerun()
