@@ -4,7 +4,7 @@ import joblib
 import pandas as pd
 import os
 import pyotp
-from smartapi import SmartConnect
+from SmartApi import SmartConnect
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
