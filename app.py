@@ -70,7 +70,7 @@ model = load_ml_model()
 
 st.markdown("""
     <div style="background: linear-gradient(135deg, #040A18 0%, #06132C 100%); border: 1px solid #111E3B; border-radius: 16px; padding: 30px; margin-bottom: 20px;">
-        <h1 style="font-size: 36px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">MARKET <span style="color: #3B82F6;">AI</span> 20-STRIKE SIGNAL MATRIX</h1>
+        <h1 style="font-size: 36px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">MARKET <span style="color: #3B82F6;">AI</span> DIRECTIONAL SIGNAL MATRIX</h1>
     </div>
 """, unsafe_allow_html=True)
 
@@ -106,7 +106,6 @@ if mode == "AngelOne Live Stream":
 
         if connect_btn and API_KEY and CLIENT_CODE and PASSWORD and TOTP_SECRET:
             try:
-                from SmartApi import SmartConnect
                 totp_challenge = pyotp.TOTP(TOTP_SECRET).now()
                 smart_api = SmartConnect(api_key=API_KEY)
                 session_data = smart_api.generateSession(CLIENT_CODE, PASSWORD, totp_challenge)
@@ -161,10 +160,10 @@ live_price_input = st.number_input(
     key="live_price_widget"
 )
 
-predict_clicked = st.button("🚀 EXECUTE 20-STRIKE OPTION MATRIX ANALYSIS")
+predict_clicked = st.button("🚀 EXECUTE OPTION STRATEGY FILTER")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- INFERENCE CORE & 20-STRIKE MATRIX TABLE ----------------
+# ---------------- INFERENCE CORE & TARGET MATRICES ----------------
 if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_authenticated):
     st.markdown('<div class="content-panel">', unsafe_allow_html=True)
     st.markdown('<div class="panel-header">📊 AI Inference Framework Response</div>', unsafe_allow_html=True)
@@ -187,47 +186,42 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_a
         st.markdown('<div class="status-card high-risk">🔴 MARKET RADAR: MARKET IS RISKY RIGHT NOW (Bearish Pressure Dominant)</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # DYNAMIC 20-CALL OPTION STRIKE GENERATOR
+    # DYNAMIC FILTERED DIRECTIONAL OPTION MATRIX GENERATOR
     st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="panel-header">🎯 Compiling Live Option Matrix Tickers (Absolute Price Targets)</div>', unsafe_allow_html=True)
     
     step = st.session_state.strike_step
     atm_strike = round(live_price_input / step) * step
+    strategy_data = []
     
-    calls_data = []
-    puts_data = []
-    
-    # CORRECTED: Cleaned range boundaries to fix the NameError compile crash
-    for i in range(-5, 5):
-        # Call Matrix Logic
-        c_strike = atm_strike + (i * step)
-        c_entry = max(15.0, round((atm_strike - c_strike) * 0.4 + 95.0, 1))
-        c_tgt = round(c_entry + (45.0 if prediction == 1 else 20.0), 1)
-        c_sl = round(c_entry - (20.0 if prediction == 1 else 10.0), 1)
-        calls_data.append([f"{target_index} {c_strike} CE", f"₹ {c_entry}", f"₹ {c_sl}", f"₹ {c_tgt}"])
-        
-        # Put Matrix Logic
-        p_strike = atm_strike + (i * step)
-        p_entry = max(15.0, round((p_strike - atm_strike) * 0.4 + 95.0, 1))
-        p_tgt = round(p_entry + (45.0 if prediction == 0 else 20.0), 1)
-        p_sl = round(p_entry - (20.0 if prediction == 0 else 10.0), 1)
-        puts_data.append([f"{target_index} {p_strike} PE", f"₹ {p_entry}", f"₹ {p_sl}", f"₹ {p_tgt}"])
+    # CHANGED: Reconfigured matrix loop to output exactly 20 calls matching only the true market framework
+    if prediction == 1:
+        st.markdown('<div class="panel-header">🎯 Top 20 Exclusive Bullish Call Option Tickers (CE Only)</div>', unsafe_allow_html=True)
+        # Pull 20 sequential strike steps below and above ATM
+        for i in range(-10, 10):
+            c_strike = atm_strike + (i * step)
+            c_entry = max(10.0, round((atm_strike - c_strike) * 0.4 + 95.0, 1))
+            c_tgt = round(c_entry + 45.0, 1)
+            c_sl = round(c_entry - 20.0, 1)
+            strategy_data.append([f"{target_index} {c_strike} CE", f"₹ {c_entry}", f"₹ {c_sl}", f"₹ {c_tgt}"])
+    else:
+        st.markdown('<div class="panel-header">🎯 Top 20 Exclusive Bearish Put Option Tickers (PE Only)</div>', unsafe_allow_html=True)
+        for i in range(-10, 10):
+            p_strike = atm_strike + (i * step)
+            p_entry = max(10.0, round((p_strike - atm_strike) * 0.4 + 95.0, 1))
+            p_tgt = round(p_entry + 45.0, 1)
+            p_sl = round(p_entry - 20.0, 1)
+            strategy_data.append([f"{target_index} {p_strike} PE", f"₹ {p_entry}", f"₹ {p_sl}", f"₹ {p_tgt}"])
 
-    cols_list = ["Option Contract Ticker", "Execution Entry Level", "Risk Stop Loss (SL)", "Take Profit Target"]
-    
-    st.subheader("📈 Top 10 Bullish Call Option Configurations (CE)")
-    st.table(pd.DataFrame(calls_data, columns=cols_list))
-    
-    st.subheader("📉 Top 10 Bearish Put Option Configurations (PE)")
-    st.table(pd.DataFrame(puts_data, columns=cols_list))
+    cols_list = ["Directional Contract Ticker", "Execution Entry Level", "Risk Stop Loss (SL)", "Take Profit Target"]
+    st.table(pd.DataFrame(strategy_data, columns=cols_list))
     st.markdown('</div>', unsafe_allow_html=True)
 
 else:
     st.markdown('<div class="content-panel">', unsafe_allow_html=True)
     st.markdown("""
         <div style="text-align: center; padding: 40px 20px; color: #64748B;">
-            <p style="font-size: 18px; font-weight: 500; margin: 0;">📊 20-Strike Signal Matrix Offline</p>
-            <p style="font-size: 14px; margin-top: 5px;">Establish a secure live tracking handshake to display entry, target, and trailing configurations across all 20 options lines.</p>
+            <p style="font-size: 18px; font-weight: 500; margin: 0;">📊 Filtered Signal Matrix Offline</p>
+            <p style="font-size: 14px; margin-top: 5px;">Establish a live terminal handshake link to isolate specific directional calls and exact price targets.</p>
         </div>
     """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
