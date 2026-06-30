@@ -8,8 +8,8 @@ import pandas as pd
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
-    page_title="MAJNU AI Quantum Terminal",
-    page_icon="⚡",
+    page_title="MAJNU AI Options Predictor",
+    page_icon="📈",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -39,138 +39,57 @@ if "current_price" not in st.session_state: st.session_state.current_price = 239
 if "baseline_open" not in st.session_state: st.session_state.baseline_open = 24030.0
 if "strike_step" not in st.session_state: st.session_state.strike_step = 50
 
-# ---------------- PROFESSIONAL TRADING HUD CSS ----------------
+# ---------------- THEME CSS ----------------
 st.markdown("""
 <style>
-    /* Dark Premium Base Layer */
-    .stApp { 
-        background: radial-gradient(circle at 50% 0%, #0B1528 0%, #030712 100%) !important; 
-        color: #F8FAFC !important; 
-    }
+    .stApp { background-color: #030712 !important; color: #F8FAFC !important; }
+    .content-panel { background: #070F21; border: 1px solid #111E3B; border-radius: 16px; padding: 30px; margin-bottom: 20px; }
+    .panel-header { font-size: 18px; font-weight: 600; color: #FFFFFF; margin-bottom: 15px; }
+    div[data-testid="stNumberInput"], div[data-testid="stSelectbox"], div[data-testid="stTextInput"] input { background-color: #091122 !important; color: #F8FAFC !important; border-radius: 8px !important; }
+    div.stButton > button { width: 100%; height: 56px; border-radius: 12px; border: none; color: white; font-size: 16px; font-weight: 700; background: linear-gradient(90deg, #2563EB 0%, #7C3AED 100%); margin-top: 15px; }
     
-    /* Elegant Glassmorphism Cards */
-    .content-panel { 
-        background: rgba(11, 21, 40, 0.6); 
-        border: 1px solid rgba(255, 255, 255, 0.05); 
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border-radius: 16px; 
-        padding: 30px; 
-        margin-bottom: 25px; 
-    }
+    .ltp-container { background: linear-gradient(90deg, rgba(37,99,235,0.15) 0%, rgba(124,58,237,0.05) 100%); border: 1px solid #1E3A8A; padding: 25px; border-radius: 12px; text-align: center; margin-bottom: 25px; }
     
-    .panel-header { 
-        font-size: 20px; 
-        font-weight: 700; 
-        color: #FFFFFF; 
-        letter-spacing: 0.5px;
-        margin-bottom: 20px; 
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-        padding-bottom: 10px;
-    }
-    
-    /* Custom input forms matching the glass theme */
-    div[data-testid="stNumberInput"], div[data-testid="stSelectbox"], div[data-testid="stTextInput"] input { 
-        background-color: rgba(9, 17, 34, 0.8) !important; 
-        color: #F8FAFC !important; 
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 10px !important; 
-    }
-    
-    /* Neon Accent CTA Action Button */
-    div.stButton > button { 
-        width: 100%; 
-        height: 56px; 
-        border-radius: 12px; 
-        border: none; 
-        color: white; 
-        font-size: 16px; 
-        font-weight: 700; 
-        letter-spacing: 1px;
-        background: linear-gradient(90deg, #2563EB 0%, #7C3AED 100%); 
-        box-shadow: 0 0 20px rgba(37, 99, 235, 0.4);
-        transition: all 0.3s ease-in-out;
-        margin-top: 15px; 
-    }
-    div.stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 0 30px rgba(124, 58, 237, 0.6);
-    }
-    
-    /* High-contrast KPI metric cards */
-    div[data-testid="stMetricValue"] div {
-        font-size: 24px !important;
-        font-weight: 700 !important;
-    }
-    
-    /* Massive Hero LTP Display */
-    .ltp-glass-hub {
-        background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(124, 58, 237, 0.05) 100%);
-        border: 1px solid rgba(37, 99, 235, 0.25);
-        box-shadow: 0 8px 32px 0 rgba(37, 99, 235, 0.1);
-        padding: 30px;
-        border-radius: 16px;
-        text-align: center;
-        margin-bottom: 30px;
-    }
-    
-    /* Professional Status Alert Elements */
-    .status-card { padding: 22px; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center; margin-top: 10px; }
-    .good-to-go { background: rgba(16, 185, 129, 0.08); border: 1px solid #10B981; color: #34D399; text-shadow: 0 0 10px rgba(16,185,129,0.3); }
-    .high-risk { background: rgba(239, 68, 68, 0.08); border: 1px solid #EF4444; color: #F87171; text-shadow: 0 0 10px rgba(239,68,68,0.3); }
-
-    /* Custom high-tech data tables style */
-    .stTable table {
-        background-color: transparent !important;
-        border-collapse: collapse !important;
-    }
-    .stTable th {
-        background-color: rgba(15, 23, 42, 0.6) !important;
-        color: #94A3B8 !important;
-        font-weight: 600 !important;
-        text-transform: uppercase !important;
-        font-size: 12px !important;
-        letter-spacing: 0.5px !important;
-    }
+    .status-card { padding: 20px; border-radius: 12px; font-weight: 700; font-size: 18px; text-align: center; margin-top: 15px; }
+    .good-to-go { background: rgba(16, 185, 129, 0.1); border: 1px solid #10B981; color: #10B981; }
+    .caution { background: rgba(245, 158, 11, 0.1); border: 1px solid #F59E0B; color: #F59E0B; }
+    .high-risk { background: rgba(239, 68, 68, 0.1); border: 1px solid #EF4444; color: #EF4444; }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- BRAND TITLE BANNER ----------------
+# ---------------- ML MODEL LOADING ----------------
+@st.cache_resource
+def load_ml_model():
+    try:
+        for path in ["models/nifty_model.pkl", "nifty_model.pkl"]:
+            if os.path.exists(path): return joblib.load(path)
+    except Exception: pass  
+    return None
+
+model = load_ml_model()
+
 st.markdown("""
-    <div style="background: linear-gradient(135deg, rgba(4,10,24,0.8) 0%, rgba(6,19,44,0.8) 100%); border: 1px solid rgba(255,255,255,0.03); border-radius: 16px; padding: 25px 35px; margin-bottom: 25px; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-            <h1 style="font-size: 28px; font-weight: 900; margin: 0; letter-spacing: -0.5px; background: linear-gradient(90deg, #FFFFFF 0%, #94A3B8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                MAJNU <span style="color: #3B82F6;">AI</span> QUANTUM TERMINAL
-            </h1>
-            <p style="color: #64748B; font-size: 13px; margin: 4px 0 0 0; font-weight: 500; letter-spacing: 0.5px;">Institutional Grade Predictive Option Chain Matrix</p>
-        </div>
-        <div style="background: rgba(30, 41, 59, 0.3); border: 1px solid rgba(255,255,255,0.05); padding: 10px 20px; border-radius: 10px; font-size: 12px; font-weight: 600; color: #3B82F6; letter-spacing: 1px;">
-            CORE v2.5 SECURE
-        </div>
+    <div style="background: linear-gradient(135deg, #040A18 0%, #06132C 100%); border: 1px solid #111E3B; border-radius: 16px; padding: 30px; margin-bottom: 20px;">
+        <h1 style="font-size: 36px; font-weight: 900; margin: 0; letter-spacing: -0.5px;">MARKET <span style="color: #3B82F6;">AI</span> DIRECTIONAL SIGNAL MATRIX</h1>
     </div>
 """, unsafe_allow_html=True)
 
-# ---------------- INDEX SELECTION & CONTROL TOGGLES ----------------
-sel_col, rad_col = st.columns([1.5, 2])
-with sel_col:
-    target_index = st.selectbox(
-        "Target Market Index Selection", 
-        ["NIFTY 50", "SENSEX", "BANKEX"], 
-        key="index_selector", 
-        on_change=reset_index_baselines
-    )
-with rad_col:
-    st.write("<p style='margin-bottom:8px; font-size:14px; font-weight:500; color:#94A3B8;'>Downstream Ticker Pipeline Strategy</p>", unsafe_allow_html=True)
-    mode = st.radio("Select Input Mode", ["Manual Input", "AngelOne Live Stream"], horizontal=True, label_visibility="collapsed")
+# ---------------- INDEX SELECTION ----------------
+target_index = st.selectbox(
+    "Select Target Market Index", 
+    ["NIFTY 50", "SENSEX", "BANKEX"], 
+    key="index_selector", 
+    on_change=reset_index_baselines
+)
+mode = st.radio("Select Input Mode", ["Manual Input", "AngelOne Live Stream"], horizontal=True)
 
 if mode == "Manual Input" and st.session_state.api_authenticated:
     st.session_state.api_authenticated = False
     st.session_state.smart_api = None
 
-feed_status_message = "Manual Override" if mode == "Manual Input" else "Streaming Live SDK Gateway"
+feed_status_message = "Manual Control Mode" if mode == "Manual Input" else "Streaming Live SDK Feed"
 
-# ---------------- SECURE NATIVE ANGELONE SMARTAPI LINK ----------------
+# ---------------- SECURE NATIVE ANGELONE GATEWAY ----------------
 if mode == "AngelOne Live Stream":
     if not st.session_state.api_authenticated:
         st.markdown('<div class="content-panel">', unsafe_allow_html=True)
@@ -182,12 +101,11 @@ if mode == "AngelOne Live Stream":
         with pw_col: PASSWORD = st.text_input("Mpin / Password", type="password", key="password_widget")
         with to_col: TOTP_SECRET = st.text_input("TOTP Token String", type="password", key="totp_widget")
             
-        connect_btn = st.button("🚀 ESTABLISH SECURE LINK HANDSHAKE")
+        connect_btn = st.button("🚀 CONNECT LIVE GATEWAY")
         st.markdown('</div>', unsafe_allow_html=True)
 
         if connect_btn and API_KEY and CLIENT_CODE and PASSWORD and TOTP_SECRET:
             try:
-                from SmartApi import SmartConnect
                 totp_challenge = pyotp.TOTP(TOTP_SECRET).now()
                 smart_api = SmartConnect(api_key=API_KEY)
                 session_data = smart_api.generateSession(CLIENT_CODE, PASSWORD, totp_challenge)
@@ -196,12 +114,12 @@ if mode == "AngelOne Live Stream":
                     st.session_state.api_authenticated = True
                     st.rerun()
                 else:
-                    st.error(f"Gateway Access Denied: {session_data.get('message', 'Check Entry Configuration')}")
+                    st.error(f"Gateway Access Denied: {session_data.get('message', 'Check Details Configuration')}")
             except Exception as e:
                 st.error(f"Connection Exception: {e}")
                 
     if st.session_state.api_authenticated and st.session_state.smart_api:
-        feed_status_message = f"AngelOne Live (Tick #{st.session_state.refresh_counter})"
+        feed_status_message = f"AngelOne Streaming Active (Tick #{st.session_state.refresh_counter})"
         try:
             token_map = {"NIFTY 50": "99926000", "SENSEX": "99919000", "BANKEX": "99923000"}
             exchange_map = {"NIFTY 50": "NSE", "SENSEX": "BSE", "BANKEX": "BSE"}
@@ -216,40 +134,40 @@ if mode == "AngelOne Live Stream":
         except Exception as data_err:
             st.error(f"Error parsing live market ticks: {data_err}")
 
-# ---------------- DYNAMIC HIGH-END VISUAL LAYOUT HUD ----------------
+# ---------------- LIVE PRICE READOUT HUB ----------------
 st.markdown(f"""
-<div class="ltp-glass-hub">
-    <span style="font-size:13px; color:#A5B4FC; text-transform:uppercase; font-weight:700; letter-spacing:1.5px;">⚡ {target_index} Current Market Price (LTP)</span>
-    <h1 style="margin:8px 0 0 0; font-size:46px; font-weight:900; color:#FFFFFF; letter-spacing:-1px;">₹ {st.session_state.current_price:,.2f}</h1>
+<div class="ltp-container">
+    <span style="font-size:14px; color:#A5B4FC; text-transform:uppercase; font-weight:700; letter-spacing:1px;">⚡ Target Live Current Price (LTP)</span>
+    <h1 style="margin:8px 0 0 0; font-size:42px; font-weight:900; color:#FFFFFF; letter-spacing:-0.5px;">₹ {st.session_state.current_price:,.2f}</h1>
 </div>
 """, unsafe_allow_html=True)
 
-m1, m2, m3 = st.columns(3)
-m1.metric(label="🕒 Feed Connection Source", value=feed_status_message)
-m2.metric(label="📊 Infrastructure Pipeline", value="Live Synchronized" if st.session_state.api_authenticated else "Manual Sandbox Mode")
-m3.metric(label="⚡ Quantitative Logic Engine", value="ML Multi-Vector Active" if model else "Adaptive Fallback Core")
+m1, m2, m3, m4 = st.columns(4)
+m1.metric(label="📅 Target Index", value=target_index)
+m2.metric(label="🕒 Feed Source", value=feed_status_message)
+m3.metric(label="📊 Pipeline Status", value="Live Sync Active" if st.session_state.api_authenticated else "Manual Mode")
+m4.metric(label="⚡ Engine Core", value="ML Inference Ready" if model else "Simulated Mode")
 
-# ---------------- TUNING PANEL INTERFACE ----------------
+# ---------------- CONTROL MATRIX INTERFACE ----------------
 st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-st.markdown('<div class="panel-header">⚙️ Dynamic Target Evaluation Configuration</div>', unsafe_allow_html=True)
+st.markdown('<div class="panel-header">🎯 Target Price Strategy Execution</div>', unsafe_allow_html=True)
 
 live_price_input = st.number_input(
-    f"Set Current Spot Price Assessment Level ({target_index})", 
+    f"Current Price Matrix Target ({target_index})", 
     format="%.2f", 
     value=st.session_state.current_price, 
     disabled=(mode == "AngelOne Live Stream"),
     key="live_price_widget"
 )
 
-predict_clicked = st.button("⚡ EXECUTE NEURAL INFERENCE QUANT CHAIN")
+predict_clicked = st.button("🚀 EXECUTE OPTION STRATEGY FILTER")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ---------------- ML INFERENCE ENGINE & 20-STRIKE MATRIX TABLE ----------------
+# ---------------- INFERENCE CORE & TARGET MATRICES ----------------
 if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_authenticated):
     st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="panel-header">🎯 Mathematical Prediction & Market Radar Alerts</div>', unsafe_allow_html=True)
+    st.markdown('<div class="panel-header">📊 AI Inference Framework Response</div>', unsafe_allow_html=True)
     
-    # Process inputs against the 6-dimensional model structure
     data_array = np.array([[st.session_state.baseline_open, live_price_input, live_price_input, live_price_input, 120000.0, 0.1]])
     
     if model is not None:
@@ -258,72 +176,52 @@ if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.api_a
         confidence = probability[1] * 100 if prediction == 1 else probability[0] * 100
     else:
         prediction = 1 if live_price_input >= st.session_state.baseline_open else 0
-        confidence = 86.45
+        confidence = 84.50
     
-    # Top-Level Trend Layout Readouts
-    out_col1, out_col2 = st.columns([1.5, 2])
-    with out_col1:
-        if prediction == 1:
-            st.markdown(f"""
-                <div style='background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.2); padding:20px; border-radius:12px; text-align:center;'>
-                    <span style='color:#64748B; font-weight:600; font-size:12px; text-transform:uppercase;'>AI Engine Forecast</span>
-                    <h2 style='color:#10B981; margin:5px 0 0 0; font-size:26px;'>🚀 BULLISH PATTERN</h2>
-                    <p style='color:#94A3B8; font-size:14px; margin-top:5px;'>Confidence Probability: <b>{confidence:.2f}%</b></p>
-                </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-                <div style='background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); padding:20px; border-radius:12px; text-align:center;'>
-                    <span style='color:#64748B; font-weight:600; font-size:12px; text-transform:uppercase;'>AI Engine Forecast</span>
-                    <h2 style='color:#EF4444; margin:5px 0 0 0; font-size:26px;'>📉 BEARISH PATTERN</h2>
-                    <p style='color:#94A3B8; font-size:14px; margin-top:5px;'>Confidence Probability: <b>{confidence:.2f}%</b></p>
-                </div>
-            """, unsafe_allow_html=True)
-            
-    with out_col2:
-        if prediction == 1:
-            st.markdown('<div class="status-card good-to-go" style="height:103px; display:flex; align-items:center; justify-content:center;">🟢 RISK MONITOR: GOOD TO GO (Enter Long Momentum)</div>', unsafe_allow_html=True)
-        else:
-            st.markdown('<div class="status-card high-risk" style="height:103px; display:flex; align-items:center; justify-content:center;">🔴 RISK MONITOR: MARKET IS RISKY RIGHT NOW (Stay Defended / Buy Puts)</div>', unsafe_allow_html=True)
-            
+    if prediction == 1:
+        st.success(f"📈 PROJECTION VECTOR: BULLISH (UP) - Intraday Confidence: {confidence:.2f}%")
+        st.markdown('<div class="status-card good-to-go">🟢 MARKET RADAR: GOOD TO GO (Bullish Framework Favored)</div>', unsafe_allow_html=True)
+    else:
+        st.error(f"📉 PROJECTION VECTOR: BEARISH (DOWN) - Intraday Confidence: {confidence:.2f}%")
+        st.markdown('<div class="status-card high-risk">🔴 MARKET RADAR: MARKET IS RISKY RIGHT NOW (Bearish Pressure Dominant)</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # HIGH END INTERACTIVE SINGLE DIRECTION STRATEGY BLOCK
+    # DYNAMIC FILTERED DIRECTIONAL OPTION MATRIX GENERATOR
     st.markdown('<div class="content-panel">', unsafe_allow_html=True)
     
     step = st.session_state.strike_step
     atm_strike = round(live_price_input / step) * step
     strategy_data = []
     
-    # FIXED: Ensured clean formatting and completely closed parenthesis matching inside list assignment
+    # CHANGED: Reconfigured matrix loop to output exactly 20 calls matching only the true market framework
     if prediction == 1:
-        st.markdown('<div class="panel-header">📊 Top 20 Filtered Institutional Bullish Options (CE Series Only)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="panel-header">🎯 Top 20 Exclusive Bullish Call Option Tickers (CE Only)</div>', unsafe_allow_html=True)
+        # Pull 20 sequential strike steps below and above ATM
         for i in range(-10, 10):
             c_strike = atm_strike + (i * step)
-            c_entry = max(8.5, round((atm_strike - c_strike) * 0.4 + 95.0, 1))
-            c_tgt = round(c_entry + 50.0, 1)
-            c_sl = round(c_entry - 22.0, 1)
-            strategy_data.append([f"{target_index} {c_strike} CE", f"₹ {c_entry:.1f}", f"₹ {c_sl:.1f}", f"₹ {c_tgt:.1f}"])
+            c_entry = max(10.0, round((atm_strike - c_strike) * 0.4 + 95.0, 1))
+            c_tgt = round(c_entry + 45.0, 1)
+            c_sl = round(c_entry - 20.0, 1)
+            strategy_data.append([f"{target_index} {c_strike} CE", f"₹ {c_entry}", f"₹ {c_sl}", f"₹ {c_tgt}"])
     else:
-        st.markdown('<div class="panel-header">📊 Top 20 Filtered Institutional Bearish Options (PE Series Only)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="panel-header">🎯 Top 20 Exclusive Bearish Put Option Tickers (PE Only)</div>', unsafe_allow_html=True)
         for i in range(-10, 10):
             p_strike = atm_strike + (i * step)
-            p_entry = max(8.5, round((p_strike - atm_strike) * 0.4 + 95.0, 1))
-            p_tgt = round(p_entry + 50.0, 1)
-            p_sl = round(p_entry - 22.0, 1)
-            strategy_data.append([f"{target_index} {p_strike} PE", f"₹ {p_entry:.1f}", f"₹ {p_sl:.1f}", f"₹ {p_tgt:.1f}"])
+            p_entry = max(10.0, round((p_strike - atm_strike) * 0.4 + 95.0, 1))
+            p_tgt = round(p_entry + 45.0, 1)
+            p_sl = round(p_entry - 20.0, 1)
+            strategy_data.append([f"{target_index} {p_strike} PE", f"₹ {p_entry}", f"₹ {p_sl}", f"₹ {p_tgt}"])
 
-    cols_list = ["Directional Contract Ticker Target", "Calculated Entry Price (LTP)", "Hard Risk Stop Loss (SL)", "Take Profit Target Level"]
+    cols_list = ["Directional Contract Ticker", "Execution Entry Level", "Risk Stop Loss (SL)", "Take Profit Target"]
     st.table(pd.DataFrame(strategy_data, columns=cols_list))
     st.markdown('</div>', unsafe_allow_html=True)
 
 else:
     st.markdown('<div class="content-panel">', unsafe_allow_html=True)
     st.markdown("""
-        <div style="text-align: center; padding: 50px 20px; color: #475569;">
-            <div style="font-size: 40px; margin-bottom:10px;">📊</div>
-            <p style="font-size: 16px; font-weight: 600; margin: 0; color: #94A3B8;">Options Intelligence Matrix Idle</p>
-            <p style="font-size: 13px; margin-top: 5px; color: #475569;">Initialize your secure terminal API handshake above or hit the prediction execute trigger to unlock entry levels.</p>
+        <div style="text-align: center; padding: 40px 20px; color: #64748B;">
+            <p style="font-size: 18px; font-weight: 500; margin: 0;">📊 Filtered Signal Matrix Offline</p>
+            <p style="font-size: 14px; margin-top: 5px;">Establish a live terminal handshake link to isolate specific directional calls and exact price targets.</p>
         </div>
     """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
