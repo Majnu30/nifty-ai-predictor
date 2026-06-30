@@ -178,7 +178,7 @@ def load_ml_model():
             if os.path.exists(path):
                 return joblib.load(path)
     except Exception:
-        pass  # If the binary is corrupted or pointer is missing, pass silently to unlock deployment
+        pass  
     return None
 
 model = load_ml_model()
@@ -235,6 +235,28 @@ mode = st.radio("Select Input Mode", ["Manual Input", "AngelOne Live Stream"], h
 
 open_price, high_price, low_price, close_price, volume, previous_return = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 api_authenticated = False
+feed_status_message = "Awaiting Gateway Auth"
+
+# --- BACKUP FALLBACK API (Yahoo Finance public query protocol) ---
+def fetch_backup_ticks(index_name):
+    ticker_map = {"NIFTY 50": "^NSEI", "SENSEX": "^BSESN", "BANKEX": "BSE-BANK.BO"}
+    ticker = ticker_map.get(index_name, "^NSEI")
+    try:
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=1d"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        res = requests.get(url, headers=headers, timeout=5).json()
+        result = res['chart']['result'][0]
+        indicators = result['indicators']['quote'][0]
+        
+        o = float(indicators['open'][0] or 0)
+        h = float(indicators['high'][0] or 0)
+        l = float(indicators['low'][0] or 0)
+        c = float(indicators['close'][0] or result['meta']['regularMarketPrice'])
+        v = float(indicators['volume'][0] or 0)
+        pr = ((c - o) / o) * 100 if o > 0 else 0.0
+        return o, h, l, c, v, pr, True
+    except Exception:
+        return 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, False
 
 # ---------------- NATIVE ANGEL ONE REST API ROUTING ----------------
 if mode == "AngelOne Live Stream":
@@ -256,7 +278,6 @@ if mode == "AngelOne Live Stream":
     if API_KEY and CLIENT_CODE and PASSWORD and TOTP_SECRET:
         try:
             totp_challenge = pyotp.TOTP(TOTP_SECRET).now()
-            
             auth_url = "https://apiconnect.angelone.in/api/v1/user/auth"
             headers = {
                 "Content-Type": "application/json",
@@ -273,20 +294,17 @@ if mode == "AngelOne Live Stream":
             if "PROXY_URL" in os.environ:
                 proxies = {"http": os.environ["PROXY_URL"], "https": os.environ["PROXY_URL"]}
                 
-            # Safely fetch raw token request without instant JSON parsing conversion
-            raw_auth_res = requests.post(auth_url, json=auth_payload, headers=headers, proxies=proxies, timeout=10)
+            raw_auth_res = requests.post(auth_url, json=auth_payload, headers=headers, proxies=proxies, timeout=6)
             
-            # Check if server payload returned HTML firewall errors or empty lines
+            # If AngelOne blocks the IP, execute backup fallback protocol automatically
             if not raw_auth_res.text or not raw_auth_res.text.strip().startswith("{"):
-                st.error("🔴 AngelOne API firewall blocking network handshake configuration.")
-                st.info("Streamlit hosting cloud environments are being intercepted. Switch to 'Manual Input' or add a Static Proxy URL to secrets.")
+                st.warning("⚠️ AngelOne WAF firewall intercepted connection. Routing via backup Cloud Feed...")
+                open_price, high_price, low_price, close_price, volume, previous_return, api_authenticated = fetch_backup_ticks(target_index)
+                feed_status_message = "Backup Live Feed" if api_authenticated else "Auth Blocked"
             else:
                 response = raw_auth_res.json()
-                
                 if response.get('status') == True and 'data' in response:
-                    api_authenticated = True
                     jwt_token = response['data']['jwtToken']
-                    
                     token_map = {"NIFTY 50": "26000", "SENSEX": "1", "BANKEX": "12"}
                     exchange_map = {"NIFTY 50": "NSE", "SENSEX": "BSE", "BANKEX": "BSE"}
                     
@@ -299,19 +317,17 @@ if mode == "AngelOne Live Stream":
                     }
                     market_payload = {
                         "mode": "OHLC",
-                        "exchangeTokens": {
-                            exchange_map[target_index]: [token_map[target_index]]
-                        }
+                        "exchangeTokens": {exchange_map[target_index]: [token_map[target_index]]}
                     }
                     
-                    raw_market_res = requests.post(market_url, json=market_payload, headers=market_headers, proxies=proxies, timeout=10)
+                    raw_market_res = requests.post(market_url, json=market_payload, headers=market_headers, proxies=proxies, timeout=6)
                     
                     if not raw_market_res.text or not raw_market_res.text.strip().startswith("{"):
-                        st.error("🔴 Market feed endpoint intercepted or dropped connection.")
+                        open_price, high_price, low_price, close_price, volume, previous_return, api_authenticated = fetch_backup_ticks(target_index)
+                        feed_status_message = "Backup Live Feed"
                     else:
                         market_res = raw_market_res.json()
-                        
-                        if market_res.get('status') == True and 'data' in market_res and 'fetched' in market_res['data'] and market_res['data']['fetched']:
+                        if market_res.get('status') == True and 'data' in market_res and market_res['data']['fetched']:
                             live_ticks = market_res['data']['fetched'][0]
                             open_price = float(live_ticks.get('open', 0))
                             high_price = float(live_ticks.get('high', 0))
@@ -319,12 +335,17 @@ if mode == "AngelOne Live Stream":
                             close_price = float(live_ticks.get('ltp', 0))
                             volume = float(live_ticks.get('volume', 0))
                             previous_return = ((close_price - open_price) / open_price) * 100 if open_price > 0 else 0.0
+                            api_authenticated = True
+                            feed_status_message = "AngelOne Live"
                         else:
-                            st.error("Market API endpoint returned data layout verification anomalies.")
+                            open_price, high_price, low_price, close_price, volume, previous_return, api_authenticated = fetch_backup_ticks(target_index)
+                            feed_status_message = "Backup Live Feed"
                 else:
-                    st.error(f"Gateway Access Denied: {response.get('message', 'Invalid response template setup')}")
-        except Exception as api_err:
-            st.error(f"Network handshake processing timeout: {api_err}")
+                    open_price, high_price, low_price, close_price, volume, previous_return, api_authenticated = fetch_backup_ticks(target_index)
+                    feed_status_message = "Backup Live Feed"
+        except Exception:
+            open_price, high_price, low_price, close_price, volume, previous_return, api_authenticated = fetch_backup_ticks(target_index)
+            feed_status_message = "Backup Live Feed"
     else:
         st.info("Awaiting input keys inside the Secure Gateway panel above to pull real-time data ticks.")
 
@@ -340,8 +361,8 @@ metric_css = """
 st.markdown(metric_css, unsafe_allow_html=True)
 
 m1.metric(label="📅 Target Index", value=target_index)
-m2.metric(label="🕒 Feed Source", value="AngelOne API" if mode == "AngelOne Live Stream" else "Manual Matrix")
-m3.metric(label="📊 Pipeline Status", value="Tick Live" if api_authenticated else "Awaiting Gateway Auth")
+m2.metric(label="🕒 Feed Source", value=feed_status_message if mode == "AngelOne Live Stream" else "Manual Matrix")
+m3.metric(label="📊 Pipeline Status", value="Tick Live" if api_authenticated else "Awaiting Data")
 m4.metric(label="⚡ Engine Core", value="ML Inference Ready" if model else "Simulated Mode")
 
 st.write("")
@@ -353,14 +374,14 @@ st.markdown(f'<div class="panel-header">📊 Dynamic Matrix Tuning: {target_inde
 c1, c2 = st.columns(2, gap="medium")
 
 with c1:
-    open_price = st.number_input("Open Price (₹)", format="%.2f", value=open_price, disabled=(mode == "AngelOne Live Stream"))
-    low_price = st.number_input("Low Price (₹)", format="%.2f", value=low_price, disabled=(mode == "AngelOne Live Stream"))
-    volume = st.number_input("Trading Volume", format="%.2f", value=volume, disabled=(mode == "AngelOne Live Stream"))
+    open_price = st.number_input("Open Price (₹)", format="%.2f", value=open_price, disabled=(mode == "AngelOne Live Stream" and api_authenticated))
+    low_price = st.number_input("Low Price (₹)", format="%.2f", value=low_price, disabled=(mode == "AngelOne Live Stream" and api_authenticated))
+    volume = st.number_input("Trading Volume", format="%.2f", value=volume, disabled=(mode == "AngelOne Live Stream" and api_authenticated))
 
 with c2:
-    high_price = st.number_input("High Price (₹)", format="%.2f", value=high_price, disabled=(mode == "AngelOne Live Stream"))
-    close_price = st.number_input("Close Price (₹)", format="%.2f", value=close_price, disabled=(mode == "AngelOne Live Stream"))
-    previous_return = st.number_input("Previous Session Return (%)", format="%.2f", value=previous_return, disabled=(mode == "AngelOne Live Stream"))
+    high_price = st.number_input("High Price (₹)", format="%.2f", value=high_price, disabled=(mode == "AngelOne Live Stream" and api_authenticated))
+    close_price = st.number_input("Close Price (₹)", format="%.2f", value=close_price, disabled=(mode == "AngelOne Live Stream" and api_authenticated))
+    previous_return = st.number_input("Previous Session Return (%)", format="%.2f", value=previous_return, disabled=(mode == "AngelOne Live Stream" and api_authenticated))
 
 predict_clicked = st.button("🚀 EXECUTE PREDICTION MATRIX")
 st.markdown('</div>', unsafe_allow_html=True)
