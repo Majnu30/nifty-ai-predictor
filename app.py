@@ -5,11 +5,12 @@ import os
 import pyotp
 import time
 import pandas as pd
+import yfinance as yf
 from SmartApi.smartConnect import SmartConnect
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
-    page_title="MAJNU AI Options Predictor PRO",
+    page_title="MAJNU AI Options & Stock Predictor PRO",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -71,6 +72,8 @@ st.markdown("""
     .good-to-go { background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); color: #10B981; box-shadow: 0 0 15px rgba(16, 185, 129, 0.05); }
     .high-risk { background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3); color: #EF4444; box-shadow: 0 0 15px rgba(239, 68, 68, 0.05); }
 
+    .stock-pill { background: #0E1726; border: 1px solid #3B82F6; padding: 12px 18px; border-radius: 10px; font-size: 15px; font-weight: 600; margin-top: 10px; display: inline-block; }
+
     .footer-panel { background: linear-gradient(90deg, #050B18 0%, #081226 100%); border: 1px solid #111E3B; border-radius: 16px; padding: 30px 20px; margin-top: 40px; text-align: center; }
     @media (min-width: 768px) { .footer-panel { text-align: left; display: flex; justify-content: space-between; align-items: center; padding: 40px; } }
 </style>
@@ -118,7 +121,7 @@ st.markdown(
                 MARKET <span style="color: #3B82F6;">AI</span> QUANT QUANTUM MATRIX
             </h1>
             <p style="color: #64748B; font-size: clamp(13px, 1.8vw, 15px); margin-top: 8px; font-weight: 400; max-width: 700px;">
-                Institutional quantitative analysis terminal combining automated machine learning inference engines with dynamic structural risk allocations.
+                Institutional quantitative analysis terminal combining automated machine learning inference engines with live stock querying metrics.
             </p>
         </div>
         <div style="background: rgba(30, 41, 59, 0.3); border: 1px solid #1E293B; padding: 12px 22px; border-radius: 12px; min-width: 150px; text-align: center; align-self: flex-start;">
@@ -133,6 +136,48 @@ st.markdown(
     """, 
     unsafe_allow_html=True
 )
+
+# ---------------- NEW UPGRADE: LIVE STOCK SEARCH HUB ----------------
+st.markdown('<div class="content-panel">', unsafe_allow_html=True)
+st.markdown('<div class="panel-header">🔍 Live Stock Real-Time Query Hub</div>', unsafe_allow_html=True)
+
+stock_ticker_input = st.text_input("Search Stock Ticker Symbol (e.g., RELIANCE.NS, INFY.NS, SBIN.NS, AAPL)", value="RELIANCE.NS")
+search_stock_btn = st.button("🔍 ANALYZE STOCK CONTEXT")
+
+if stock_ticker_input and search_stock_btn:
+    try:
+        with st.spinner(f"Querying live technical telemetry for {stock_ticker_input}..."):
+            ticker_obj = yf.Ticker(stock_ticker_input)
+            hist_df = ticker_obj.history(period="5d")
+            
+            if not hist_df.empty and len(hist_df) >= 2:
+                latest_stock_close = float(hist_df.iloc[-1]['Close'])
+                prior_stock_close = float(hist_df.iloc[-2]['Close'])
+                stock_open = float(hist_df.iloc[-1]['Open'])
+                
+                # Math metrics allocation rules for searched equity asset
+                stock_entry = round(latest_stock_close * 1.002, 2)
+                stock_target = round(latest_stock_close * 1.025, 2)
+                stock_sl = round(latest_stock_close * 0.985, 2)
+                stock_change = ((latest_stock_close - prior_stock_close) / prior_stock_close) * 100
+                
+                st.markdown(f"""
+                <div style="margin-top:15px; border-left: 4px solid #3B82F6; padding-left: 15px;">
+                    <h3 style="color:#FFFFFF; margin:0 0 10px 0; font-size:18px;">📋 Real-Time Asset Profile: {stock_ticker_input.upper()}</h3>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+                        <div class="stock-pill">LTP: <span style="color:#60A5FA;">₹ {latest_stock_close:,.2f}</span></div>
+                        <div class="stock-pill">Day Change: <span style="color:{'#10B981' if stock_change >=0 else '#EF4444'};">{stock_change:.2f}%</span></div>
+                        <div class="stock-pill" style="border-color:#10B981;">Target Entry: <span style="color:#10B981;">₹ {stock_entry:,.2f}</span></div>
+                        <div class="stock-pill" style="border-color:#10B981;">Take Profit: <span style="color:#10B981;">₹ {stock_target:,.2f}</span></div>
+                        <div class="stock-pill" style="border-color:#EF4444;">Stop Loss (SL): <span style="color:#EF4444;">₹ {stock_sl:,.2f}</span></div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.warning("Symbol resolved, but no active secondary market transaction cycles were recorded.")
+    except Exception as stock_err:
+        st.error(f"Ticker look-up sequence fault: {stock_err}. Ensure exchange suffix matches (e.g. '.NS' for National Stock Exchange).")
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- INDEX & STRATEGY SELECTION SECTION ----------------
 st.markdown("<p style='color:#94A3B8; font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;'>Data Stream Orchestration</p>", unsafe_allow_html=True)
