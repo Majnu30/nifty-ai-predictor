@@ -94,30 +94,33 @@ def fetch_live_stock_telemetry(ticker_symbol):
         
     try:
         ticker_obj = yf.Ticker(ticker_symbol)
-        # Fetch minimal fast footprint history
-        hist_df = ticker_obj.history(period="5d")
-        if not hist_df.empty and len(hist_df) >= 2:
+        # Fetch 30 days to compute standard volatility metrics and ATR approximations
+        hist_df = ticker_obj.history(period="1mo")
+        if not hist_df.empty and len(hist_df) >= 5:
             latest_close = float(hist_df.iloc[-1]['Close'])
             prior_close = float(hist_df.iloc[-2]['Close'])
             stock_change = ((latest_close - prior_close) / prior_close) * 100
-            return {"ltp": latest_close, "change": stock_change, "mode": "Live", "resolved_ticker": ticker_symbol}
+            
+            # Compute Average True Range Approximation (High - Low) over the last 10 sessions
+            recent_data = hist_df.tail(10)
+            daily_ranges = recent_data['High'] - recent_data['Low']
+            avg_daily_move = float(daily_ranges.mean())
+            
+            # Avoid division by zero bugs
+            if avg_daily_move <= 0:
+                avg_daily_move = latest_close * 0.015
+                
+            return {
+                "ltp": latest_close, 
+                "change": stock_change, 
+                "avg_move": avg_daily_move,
+                "mode": "Live", 
+                "resolved_ticker": ticker_symbol
+            }
     except Exception:
         pass
     
-    # Global fallback asset lookup try if .NS strategy completely failed (e.g. index identifiers or global assets)
-    original_symbol = ticker_symbol.split(".")[0]
-    try:
-        ticker_obj = yf.Ticker(original_symbol)
-        hist_df = ticker_obj.history(period="5d")
-        if not hist_df.empty and len(hist_df) >= 2:
-            latest_close = float(hist_df.iloc[-1]['Close'])
-            prior_close = float(hist_df.iloc[-2]['Close'])
-            stock_change = ((latest_close - prior_close) / prior_close) * 100
-            return {"ltp": latest_close, "change": stock_change, "mode": "Live", "resolved_ticker": original_symbol}
-    except Exception:
-        pass
-        
-    return {"ltp": 0.00, "change": 0.00, "mode": "Failed Resolution", "resolved_ticker": ticker_symbol}
+    return {"ltp": 0.00, "change": 0.00, "avg_move": 0.00, "mode": "Failed Resolution", "resolved_ticker": ticker_symbol}
 
 # ---------------- ML MODEL LOADING ----------------
 @st.cache_resource
@@ -283,7 +286,7 @@ with index_tab:
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
-# TAB 2: STANDALONE STOCKS ANALYST SEGMENT
+# TAB 2: STANDALONE STOCKS ANALYST SEGMENT (UPDATED FOR DAYS HORIZON & OUTLOOK)
 # ------------------------------------------------------------------------------
 with stock_tab:
     st.markdown('<div class="content-panel">', unsafe_allow_html=True)
@@ -293,7 +296,7 @@ with stock_tab:
     search_stock_btn = st.button("🔍 RUN POSITION ASSESSMENT")
     
     if search_stock_btn and stock_ticker_input:
-        with st.spinner("Analyzing ticker risk barriers..."):
+        with st.spinner("Analyzing ticker risk barriers & calculation horizons..."):
             stock_profile = fetch_live_stock_telemetry(stock_ticker_input)
             
             if stock_profile["mode"] == "Failed Resolution":
@@ -301,11 +304,31 @@ with stock_tab:
             else:
                 s_ltp = stock_profile["ltp"]
                 s_change = stock_profile["change"]
+                s_avg_move = stock_profile["avg_move"]
                 resolved_name = stock_profile["resolved_ticker"]
                 
+                # Risk & Target structural parameters
                 s_entry = round(s_ltp * 1.002, 2)
                 s_target = round(s_ltp * 1.030, 2)
                 s_sl = round(s_ltp * 0.985, 2)
+                
+                # --- NEW VOLATILITY TIME COMPONENT CALCULATIONS ---
+                price_distance = abs(s_target - s_entry)
+                estimated_days = int(np.ceil(price_distance / s_avg_move)) if s_avg_move > 0 else 1
+                
+                # Determine Dynamic Short-Term Outlook Strategy Context
+                if s_change >= 1.5:
+                    outlook_bias = "🔥 Accelerated Momentum (Strong Bullish)"
+                    status_class = "good-to-go"
+                elif 0.0 <= s_change < 1.5:
+                    outlook_bias = "📈 Steady Pace Accumulation (Bullish)"
+                    status_class = "good-to-go"
+                elif -1.5 <= s_change < 0.0:
+                    outlook_bias = "📉 Mean Reverting Compression (Minor Bearish)"
+                    status_class = "high-risk"
+                else:
+                    outlook_bias = "⚠️ High Risk Expansion Breakout (Strong Bearish)"
+                    status_class = "high-risk"
                 
                 st.markdown(f"""
                 <div style="margin-top:10px; padding: 20px; background:#070A13; border:1px solid #1E293B; border-radius:10px;">
@@ -319,6 +342,21 @@ with stock_tab:
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
+                
+                # Highlighted Dynamic Panel Indicators
+                st.markdown(f"""
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px;">
+                    <div class="status-card {status_class}" style="margin-top: 0; padding: 18px;">
+                        <span style="font-size: 11px; text-transform: uppercase; color: #94A3B8; display: block; margin-bottom: 4px;">SHORT-TERM MATRIX OUTLOOK</span>
+                        <span style="font-size: 16px; font-weight: 700;">{outlook_bias}</span>
+                    </div>
+                    <div class="status-card good-to-go" style="margin-top: 0; padding: 18px; background: rgba(37, 99, 235, 0.06); border-color: rgba(37, 99, 235, 0.2); color: #60A5FA;">
+                        <span style="font-size: 11px; text-transform: uppercase; color: #94A3B8; display: block; margin-bottom: 4px;">ESTIMATED TARGET COMPLETION HORIZON</span>
+                        <span style="font-size: 18px; font-weight: 800; color: #FFFFFF;">⏳ ~ {estimated_days} Trading Days</span>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- STOCKXY FOOTER CONSOLE BANNER ----------------
