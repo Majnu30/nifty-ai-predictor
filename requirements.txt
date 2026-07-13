@@ -1,8 +1,6 @@
 streamlit
 numpy
 joblib
-pandas
 pyotp
-logzero
-websocket-client
-smartapi-python
+pandas
+yfinance
