@@ -10,8 +10,8 @@ from SmartApi.smartConnect import SmartConnect
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(
-    page_title="STOCKXY Quantitative Terminal",
-    page_icon="📈",
+    page_title="STOCKXY Advanced Quantitative Console",
+    page_icon="⚡",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -45,75 +45,80 @@ if "baseline_open" not in st.session_state: st.session_state.baseline_open = 240
 if "strike_step" not in st.session_state: st.session_state.strike_step = 50
 if "lot_size" not in st.session_state: st.session_state.lot_size = 25
 
-# ---------------- INSTITUTIONAL INTERFACE THEME GRAPHICS (CSS) ----------------
+# ---------------- HIGH-TECH DARK CYBER STYLING CORE ----------------
 st.markdown("""
 <style>
-    /* Premium FinTech Clean Palette */
-    .stApp { background-color: #F4F6F9 !important; color: #1E293B !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .block-container { padding-top: 1.5rem; padding-bottom: 3rem; max-width: 1240px; margin: 0 auto; }
+    /* Dark Cyber Glassmorphic Theme Overrides */
+    .stApp { background-color: #020617 !important; color: #F8FAFC !important; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+    .block-container { padding-top: 1.5rem; padding-bottom: 4rem; max-width: 1300px; margin: 0 auto; }
     #MainMenu {visibility: hidden;} footer {visibility: hidden;}
 
-    /* Premium Sculpted Card Panels */
+    /* Premium Neon-Glass Panels */
     .content-panel { 
-        background: #FFFFFF; 
-        border: 1px solid rgba(226, 232, 240, 0.8); 
+        background: #0B1329; 
+        border: 1px solid #1E293B; 
         border-radius: 16px; 
-        padding: 28px; 
+        padding: 26px; 
         margin-bottom: 24px; 
-        box-shadow: 0 4px 20px -2px rgba(148, 163, 184, 0.08), 0 2px 8px -1px rgba(148, 163, 184, 0.04);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
     }
-    .panel-header { font-size: 13px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
+    .panel-header { font-size: 13px; font-weight: 700; color: #38BDF8; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
 
-    /* Input Fields Styling Overrides */
-    label[data-testid="stWidgetLabel"] p { color: #475569 !important; font-weight: 600 !important; font-size: 13px !important; margin-bottom: 8px !important; }
+    /* Custom Form Input Frameworks */
+    label[data-testid="stWidgetLabel"] p { color: #94A3B8 !important; font-weight: 600 !important; font-size: 13px !important; margin-bottom: 8px !important; }
     div[data-testid="stNumberInput"] input, div[data-testid="stSelectbox"] div, div[data-testid="stTextInput"] input { 
-        background-color: #FCFDFE !important; color: #0F172A !important; border: 1px solid #E2E8F0 !important; border-radius: 10px !important; height: 46px !important; font-size: 14px !important; padding-left: 14px !important;
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    div[data-testid="stNumberInput"] input:focus, div[data-testid="stSelectbox"] div:focus, div[data-testid="stTextInput"] input:focus {
-        border-color: #00D09C !important; box-shadow: 0 0 0 3px rgba(0, 208, 156, 0.15) !important;
+        background-color: #030712 !important; color: #FFFFFF !important; border: 1px solid #1E293B !important; border-radius: 8px !important; height: 44px !important; font-size: 14px !important;
     }
     div[data-testid="stRadio"] > label { display: none; }
 
-    /* Groww Premium Mint Accent CTA Buttons */
+    /* High-Gloss Command Buttons */
     div.stButton > button { 
-        width: 100%; height: 50px; border-radius: 10px; border: none; color: white; font-size: 15px; font-weight: 700; background: linear-gradient(135deg, #00D09C 0%, #00B386 100%); 
-        box-shadow: 0 4px 14px rgba(0, 208, 156, 0.3); transition: all 0.2s ease; margin-top: 10px; letter-spacing: 0.5px;
+        width: 100%; height: 48px; border-radius: 8px; border: none; color: white; font-size: 14px; font-weight: 700; 
+        background: linear-gradient(90deg, #0284C7 0%, #3B82F6 100%); box-shadow: 0 4px 15px rgba(2, 132, 199, 0.25); transition: all 0.2s ease; margin-top: 10px;
     }
-    div.stButton > button:hover { background: linear-gradient(135deg, #00B386 0%, #009A6C 100%); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0, 208, 156, 0.4); color: white !important; }
+    div.stButton > button:hover { background: linear-gradient(90deg, #0369A1 0%, #2563EB 100%); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(2, 132, 199, 0.4); color: white !important; }
     
-    /* Elegant Hero Terminal LTP Readout */
+    /* Interactive LTP Telemetry Box */
     .ltp-container { 
-        background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%); border: 1px solid #E2E8F0; padding: 26px; border-radius: 16px; text-align: center; margin-bottom: 24px;
-        box-shadow: 0 10px 30px -5px rgba(148, 163, 184, 0.05);
+        background: linear-gradient(135deg, #0B1329 0%, #030712 100%); border: 1px solid #1E293B; padding: 24px; border-radius: 16px; text-align: center; margin-bottom: 24px;
+        box-shadow: inset 0 0 20px rgba(56, 189, 248, 0.05);
     }
-    .responsive-header { background: #FFFFFF; border: 1px solid rgba(226, 232, 240, 0.8); border-radius: 16px; padding: 24px 32px; margin-bottom: 24px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.01); }
+    .responsive-header { background: #0B1329; border: 1px solid #1E293B; border-radius: 16px; padding: 24px 30px; margin-bottom: 24px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 12px; }
     @media (min-width: 768px) { .responsive-header { flex-direction: row; align-items: center; } }
 
-    /* Dynamic Output Execution Badges */
-    .status-card { padding: 16px; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: center; margin-top: 14px; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
-    .good-to-go { background: #E6FDF5; border: 1px solid rgba(0, 208, 156, 0.3); color: #008F66; }
-    .high-risk { background: #FFF5F5; border: 1px solid rgba(245, 101, 101, 0.3); color: #C53030; }
+    /* Dynamic Output State Ribbons */
+    .status-card { padding: 16px; border-radius: 8px; font-weight: 700; font-size: 14px; text-align: center; margin-top: 14px; letter-spacing: 0.5px; }
+    .good-to-go { background: rgba(16, 185, 129, 0.08); border: 1px solid #10B981; color: #10B981; }
+    .high-risk { background: rgba(239, 68, 68, 0.08); border: 1px solid #EF4444; color: #EF4444; }
 
-    /* Structured Micro-Data Information Badges */
-    .stock-pill { 
-        background: #FFFFFF; border: 1px solid #E2E8F0; padding: 16px; border-radius: 12px; font-size: 14px; font-weight: 600; text-align: center; 
-        box-shadow: 0 4px 12px rgba(148, 163, 184, 0.03); transition: transform 0.2s;
-    }
-    .stock-pill:hover { transform: translateY(-2px); border-color: #CBD5E1; }
+    /* Institutional Custom Grid Table Overrides */
+    .matrix-table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #070D1F; border-radius: 8px; overflow: hidden; }
+    .matrix-table th { background: #0F172A; color: #94A3B8; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 14px; text-align: left; border-bottom: 1px solid #1E293B; }
+    .matrix-table td { padding: 14px; font-size: 13px; border-bottom: 1px solid #111E38; color: #E2E8F0; font-family: monospace; }
+    .matrix-table tr:hover { background: rgba(255,255,255,0.02); }
+
+    /* ---------------- LINEAR TIMELINE METRIC SCALE SLIDERS ---------------- */
+    .timeline-wrapper { margin: 25px 0 15px 0; position: relative; padding: 0 10px; }
+    .timeline-bar { height: 4px; background: #1E293B; border-radius: 2px; position: relative; }
+    .timeline-progress { height: 4px; background: #10B981; position: absolute; left: 25%; width: 45%; }
+    .timeline-node { width: 8px; height: 8px; background: #475569; border-radius: 50%; position: absolute; top: -2px; }
+    .node-sl { left: 0%; background: #EF4444; }
+    .node-entry { left: 25%; background: #38BDF8; }
+    .node-current { left: 70%; background: #FFFFFF; width: 12px; height: 12px; top: -4px; box-shadow: 0 0 10px #FFFFFF; }
+    .node-target { right: 0%; background: #10B981; }
+
+    .level-labels { display: flex; justify-content: space-between; margin-top: 10px; }
+    .level-block { display: flex; flex-direction: column; font-size: 12px; }
+    .level-block.center { text-align: center; }
+    .level-block.right { text-align: right; }
+    .level-title { color: #64748B; font-weight: 500; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+    .level-value { color: #F8FAFC; font-weight: 700; margin-top: 2px; font-family: monospace; font-size: 14px; }
+
+    /* Tab Controller Custom Theming */
+    button[data-baseweb="tab"] { background-color: transparent !important; color: #64748B !important; font-weight: 700 !important; font-size: 14px !important; padding: 12px 20px !important; }
+    button[data-baseweb="tab"][aria-selected="true"] { color: #38BDF8 !important; border-bottom: 2px solid #38BDF8 !important; }
     
-    /* Clean Custom Metrics Overlay Style Modifications */
-    div[data-testid="stProgress"] > div > div { background-color: #00D09C !important; }
-    
-    /* Institutional DataFrame Container Structure Override */
-    div[data-testid="stDataFrame"] { border: 1px solid #E2E8F0 !important; border-radius: 12px !important; overflow: hidden !important; background: white; }
-
-    /* Modern Segmented Navigation Layout Adjustments */
-    button[data-baseweb="tab"] { background-color: transparent !important; border: none !important; padding: 12px 24px !important; font-size: 14px !important; font-weight: 700 !important; color: #64748B !important; }
-    button[data-baseweb="tab"][aria-selected="true"] { color: #00D09C !important; border-bottom: 3px solid #00D09C !important; }
-
-    .footer-panel { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 16px; padding: 24px; margin-top: 48px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.01); }
+    .footer-panel { background: #0B1329; border: 1px solid #1E293B; border-radius: 16px; padding: 24px; margin-top: 48px; display: flex; justify-content: space-between; align-items: center; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -148,13 +153,13 @@ st.markdown(
     """
     <div class="responsive-header">
         <div>
-            <h1 style="font-size: 26px; font-weight: 800; margin: 0; color: #0F172A; letter-spacing: -0.3px;">
-                STOCK<span style="color: #00D09C;">XY</span> <span style="font-weight:400; color:#94A3B8;">Terminal</span>
+            <h1 style="font-size: 26px; font-weight: 900; margin: 0; color: #FFFFFF; letter-spacing: 1px;">
+                STOCK<span style="color: #38BDF8;">XY</span> <span style="font-weight:400; color:#64748B; font-size:18px; letter-spacing:0px;">Quantum Workspace</span>
             </h1>
         </div>
-        <div style="background: #E6FDF5; border: 1px solid rgba(0, 208, 156, 0.4); padding: 6px 16px; border-radius: 8px;">
-            <span style="color: #00B386; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
-                Quantitative Engine Online
+        <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.3); padding: 6px 16px; border-radius: 8px;">
+            <span style="color: #38BDF8; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                💎 HFT QUANT PLATFORM ACTIVE
             </span>
         </div>
     </div>
@@ -172,7 +177,7 @@ index_tab, stock_tab = st.tabs(["📊 Market Indices Matrix", "🏢 Individual S
 # ------------------------------------------------------------------------------
 with index_tab:
     st.markdown('<div class="content-panel">', unsafe_allow_html=True)
-    st.markdown('<div class="panel-header">⚙️ Real-Time Source Configuration</div>', unsafe_allow_html=True)
+    st.markdown('<div class="panel-header">🛠️ Telemetry Feed Routing</div>', unsafe_allow_html=True)
     
     c_sel1, c_sel2 = st.columns([1, 2])
     with c_sel1:
@@ -231,8 +236,8 @@ with index_tab:
 
     st.markdown(f"""
     <div class="ltp-container">
-        <span style="font-size:11px; color:#94A3B8; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; display:block; margin-bottom: 2px;">Target Index Last Traded Price</span>
-        <h1 style="margin:0; font-size:36px; font-weight:800; color:#0F172A; font-family: -apple-system, monospace;">₹ {current_price_display:,.2f}</h1>
+        <span style="font-size:11px; color:#64748B; text-transform:uppercase; font-weight:700; letter-spacing:1px; display:block; margin-bottom: 2px;">Target Index Last Traded Price</span>
+        <h1 style="margin:0; font-size:36px; font-weight:800; color:#38BDF8; font-family: monospace;">₹ {current_price_display:,.2f}</h1>
     </div>
     """, unsafe_allow_html=True)
 
@@ -244,7 +249,7 @@ with index_tab:
     with r_col2: risk_percent = st.number_input("Allowed Portfolio Risk Allocation (%)", min_value=0.1, max_value=10.0, value=1.0, step=0.5)
     
     live_price_input = st.number_input(f"Current Price Trigger Baseline ({target_index})", format="%.2f", value=current_price_display, disabled=(mode == "AngelOne Live Stream"), key="live_price_index_widget")
-    predict_clicked = st.button("🚀 EXECUTE QUANT DIRECTIONAL OVERVIEW")
+    predict_clicked = st.button("🚀 EXECUTE QUANT DIRECTIONAL SCANNER")
     st.markdown('</div>', unsafe_allow_html=True)
 
     if predict_clicked or (mode == "AngelOne Live Stream" and st.session_state.get('api_authenticated')):
@@ -252,15 +257,15 @@ with index_tab:
         prediction = 1 if live_price_input >= baseline_open_display else 0
         
         if prediction == 1:
-            st.markdown('<div class="status-card good-to-go">📈 DIRECTION BIAS: BULLISH — CE CALL OPTIONS FILTERED</div>', unsafe_allow_html=True)
+            st.markdown('<div class="status-card good-to-go">🔺 DIRECTION BIAS: BULLISH — CE CALL OPTIONS FILTERED</div>', unsafe_allow_html=True)
         else:
-            st.markdown('<div class="status-card high-risk">📉 DIRECTION BIAS: BEARISH — PE PUT OPTIONS FILTERED</div>', unsafe_allow_html=True)
+            st.markdown('<div class="status-card high-risk">🔻 DIRECTION BIAS: BEARISH — PE PUT OPTIONS FILTERED</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('<div class="content-panel">', unsafe_allow_html=True)
         step = strike_step_display
         atm_strike = round(live_price_input / step) * step
-        strategy_data = []
+        table_rows_html = ""
         max_rupees_risk = trading_capital * (risk_percent / 100.0)
         
         if prediction == 1:
@@ -271,7 +276,16 @@ with index_tab:
                 c_tgt = round(c_entry + 45.0, 1)
                 c_sl = round(c_entry - 20.0, 1)
                 max_recommended_lots = int(max_rupees_risk // (max(1.0, c_entry - c_sl) * lot_size_display))
-                strategy_data.append([f"{target_index} {c_strike} CE", c_entry, c_sl, c_tgt, f"{max_recommended_lots} Lots"])
+                
+                table_rows_html += f"""
+                <tr>
+                    <td style="color:#10B981; font-weight:700;">{target_index} {c_strike} CE</td>
+                    <td>₹ {c_entry:.2f}</td>
+                    <td style="color:#EF4444;">₹ {c_sl:.2f}</td>
+                    <td style="color:#10B981;">₹ {c_tgt:.2f}</td>
+                    <td style="color:#38BDF8; font-weight:600;">{max_recommended_lots} Lots</td>
+                </tr>
+                """
         else:
             st.markdown('<div class="panel-header">🎯 Target Put Option Matrix (PE Only)</div>', unsafe_allow_html=True)
             for i in range(-5, 5):
@@ -280,10 +294,33 @@ with index_tab:
                 p_tgt = round(p_entry + 45.0, 1)
                 p_sl = round(p_entry - 20.0, 1)
                 max_recommended_lots = int(max_rupees_risk // (max(1.0, p_entry - p_sl) * lot_size_display))
-                strategy_data.append([f"{target_index} {p_strike} PE", p_entry, p_sl, p_tgt, f"{max_recommended_lots} Lots"])
+                
+                table_rows_html += f"""
+                <tr>
+                    <td style="color:#EF4444; font-weight:700;">{target_index} {p_strike} PE</td>
+                    <td>₹ {p_entry:.2f}</td>
+                    <td style="color:#EF4444;">₹ {p_sl:.2f}</td>
+                    <td style="color:#10B981;">₹ {p_tgt:.2f}</td>
+                    <td style="color:#38BDF8; font-weight:600;">{max_recommended_lots} Lots</td>
+                </tr>
+                """
 
-        cols_list = ["Contract Identifier", "Entry Threshold", "Stop Loss (SL)", "Profit Target", "Max Allowed Allocation"]
-        st.dataframe(pd.DataFrame(strategy_data, columns=cols_list).style.format({"Entry Threshold": "₹ {:.2f}", "Stop Loss (SL)": "₹ {:.2f}", "Profit Target": "₹ {:.2f}"}), use_container_width=True, hide_index=True)
+        st.markdown(f"""
+        <table class="matrix-table">
+            <thead>
+                <tr>
+                    <th>Contract Ticker Name</th>
+                    <th>Target Entry Level</th>
+                    <th>Risk Stop Loss (SL)</th>
+                    <th>Take Profit Target</th>
+                    <th>Max Lot Sizing Allowed</th>
+                </tr>
+            </thead>
+            <tbody>
+                {table_rows_html}
+            </tbody>
+        </table>
+        """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
 # ------------------------------------------------------------------------------
@@ -297,7 +334,7 @@ with stock_tab:
     search_stock_btn = st.button("🔍 RUN STRATEGIC ASSET EVALUATION")
     
     if search_stock_btn and stock_ticker_input:
-        with st.spinner("Analyzing structural data metrics..."):
+        with st.spinner("Analyzing structural mathematical layers..."):
             stock_profile = fetch_live_stock_telemetry(stock_ticker_input.strip().upper())
             s_ltp = stock_profile["ltp"]
             s_change = stock_profile["change"]
@@ -307,14 +344,32 @@ with stock_tab:
             s_sl = round(s_ltp * 0.985, 2)
             
             st.markdown(f"""
-            <div style="margin-top:12px; padding: 24px; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:14px; box-shadow: 0 4px 16px rgba(148,163,184,0.04);">
-                <h3 style="color:#1E293B; margin:0 0 18px 0; font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">📋 Calculated Execution Blueprint: {stock_ticker_input.upper()}</h3>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:16px;">
-                    <div class="stock-pill"><span style="color:#94A3B8; font-size:11px; text-transform:uppercase; display:block; margin-bottom:4px; font-weight:700;">Current LTP</span><span style="color:#00D09C; font-size:18px; font-weight:700;">₹ {s_ltp:,.2f}</span></div>
-                    <div class="stock-pill"><span style="color:#94A3B8; font-size:11px; text-transform:uppercase; display:block; margin-bottom:4px; font-weight:700;">Day Change</span><span style="color:{'#00D09C' if s_change >=0 else '#EF4444'}; font-size:18px; font-weight:700;">{s_change:.2f}%</span></div>
-                    <div class="stock-pill" style="border-bottom: 3px solid #00D09C;"><span style="color:#94A3B8; font-size:11px; text-transform:uppercase; display:block; margin-bottom:4px; font-weight:700;">Entry Threshold</span><span style="color:#1E293B; font-size:18px; font-weight:700;">₹ {s_entry:,.2f}</span></div>
-                    <div class="stock-pill" style="border-bottom: 3px solid #00D09C;"><span style="color:#94A3B8; font-size:11px; text-transform:uppercase; display:block; margin-bottom:4px; font-weight:700;">Target Level</span><span style="color:#1E293B; font-size:18px; font-weight:700;">₹ {s_target:,.2f}</span></div>
-                    <div class="stock-pill" style="border-bottom: 3px solid #EF4444;"><span style="color:#94A3B8; font-size:11px; text-transform:uppercase; display:block; margin-bottom:4px; font-weight:700;">Stop Loss (SL)</span><span style="color:#EF4444; font-size:18px; font-weight:700;">₹ {s_sl:,.2f}</span></div>
+            <div class="content-panel" style="background:#070D1F; border:1px solid #1E293B; margin-top:15px;">
+                <h3 style="color:#38BDF8; margin:0 0 10px 0; font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">📋 Risk-Reward Tracking Scale Blueprint: {stock_ticker_input.upper()}</h3>
+                
+                <div class="timeline-wrapper">
+                    <div class="floating-price-label">LTP: ₹ {s_ltp:,.2f} ({s_change:+.2f}%)</div>
+                    <div class="timeline-bar">
+                        <div class="timeline-progress"></div>
+                        <div class="timeline-node node-sl"></div>
+                        <div class="timeline-node node-entry"></div>
+                        <div class="timeline-node node-current"></div>
+                        <div class="timeline-node node-target"></div>
+                    </div>
+                    <div class="level-labels">
+                        <div class="level-block">
+                            <span class="level-title" style="color:#EF4444;">Stop Loss (SL)</span>
+                            <span class="level-value" style="color:#EF4444;">₹ {s_sl:,.2f}</span>
+                        </div>
+                        <div class="level-block center">
+                            <span class="level-title" style="color:#38BDF8;">Buy Entry Threshold</span>
+                            <span class="level-value" style="color:#38BDF8;">₹ {s_entry:,.2f}</span>
+                        </div>
+                        <div class="level-block right">
+                            <span class="level-title" style="color:#10B981;">Target Objective</span>
+                            <span class="level-value" style="color:#10B981;">₹ {s_target:,.2f}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -325,10 +380,10 @@ st.markdown(
     """
     <div class="footer-panel">
         <div>
-            <h1 style="font-size: 16px; font-weight: 800; margin: 0; color: #0F172A; letter-spacing: 1px; line-height: 1;">
-                STOCK<span style="color: #00D09C;">XY</span>
+            <h1 style="font-size: 16px; font-weight: 800; margin: 0; color: #FFFFFF; letter-spacing: 1px; line-height: 1;">
+                STOCK<span style="color: #38BDF8;">XY</span>
             </h1>
-            <p style="color: #94A3B8; font-size: 11px; margin-top: 4px; font-weight: 500; margin-bottom:0;">
+            <p style="color: #64748B; font-size: 11px; margin-top: 4px; font-weight: 500; margin-bottom:0;">
                 Quantitative Analytics Core Architecture Platform • 2026
             </p>
         </div>
