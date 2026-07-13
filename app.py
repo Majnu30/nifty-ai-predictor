@@ -274,7 +274,7 @@ with index_tab:
                 c_strike = atm_strike + (i * step)
                 c_entry = max(10.0, round((atm_strike - c_strike) * 0.4 + 95.0, 1))
                 c_tgt = round(c_entry + 45.0, 1)
-                c_sl = round(c_entry - 20.0, 1)
+                c_sl = max(1.0, round(c_entry - 20.0, 1)) # Safety math floor correction wrapper applied
                 max_recommended_lots = int(max_rupees_risk // (max(1.0, c_entry - c_sl) * lot_size_display))
                 
                 table_rows_html += f"""
@@ -292,7 +292,7 @@ with index_tab:
                 p_strike = atm_strike + (i * step)
                 p_entry = max(10.0, round((p_strike - atm_strike) * 0.4 + 95.0, 1))
                 p_tgt = round(p_entry + 45.0, 1)
-                p_sl = round(p_entry - 20.0, 1)
+                p_sl = max(1.0, round(p_entry - 20.0, 1)) # Safety math floor correction wrapper applied
                 max_recommended_lots = int(max_rupees_risk // (max(1.0, p_entry - p_sl) * lot_size_display))
                 
                 table_rows_html += f"""
@@ -347,6 +347,7 @@ with stock_tab:
             <div class="content-panel" style="background:#070D1F; border:1px solid #1E293B; margin-top:15px;">
                 <h3 style="color:#38BDF8; margin:0 0 10px 0; font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">📋 Risk-Reward Tracking Scale Blueprint: {stock_ticker_input.upper()}</h3>
                 
+                <!-- PROGRESS MATRICES TIMELINE SCALES INTERFACE -->
                 <div class="timeline-wrapper">
                     <div class="floating-price-label">LTP: ₹ {s_ltp:,.2f} ({s_change:+.2f}%)</div>
                     <div class="timeline-bar">
