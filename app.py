@@ -84,19 +84,40 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------- SAFE STOCK DATA CACHE UTILITY ----------------
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=60)
 def fetch_live_stock_telemetry(ticker_symbol):
+    ticker_symbol = ticker_symbol.strip().upper()
+    
+    # Auto-fallback: append .NS if user types a naked symbol without a market suffix
+    if "." not in ticker_symbol:
+        ticker_symbol = f"{ticker_symbol}.NS"
+        
     try:
         ticker_obj = yf.Ticker(ticker_symbol)
+        # Fetch minimal fast footprint history
         hist_df = ticker_obj.history(period="5d")
         if not hist_df.empty and len(hist_df) >= 2:
             latest_close = float(hist_df.iloc[-1]['Close'])
             prior_close = float(hist_df.iloc[-2]['Close'])
             stock_change = ((latest_close - prior_close) / prior_close) * 100
-            return {"ltp": latest_close, "change": stock_change, "mode": "Live"}
+            return {"ltp": latest_close, "change": stock_change, "mode": "Live", "resolved_ticker": ticker_symbol}
     except Exception:
         pass
-    return {"ltp": 2540.00, "change": 1.45, "mode": "Simulated Fallback"}
+    
+    # Global fallback asset lookup try if .NS strategy completely failed (e.g. index identifiers or global assets)
+    original_symbol = ticker_symbol.split(".")[0]
+    try:
+        ticker_obj = yf.Ticker(original_symbol)
+        hist_df = ticker_obj.history(period="5d")
+        if not hist_df.empty and len(hist_df) >= 2:
+            latest_close = float(hist_df.iloc[-1]['Close'])
+            prior_close = float(hist_df.iloc[-2]['Close'])
+            stock_change = ((latest_close - prior_close) / prior_close) * 100
+            return {"ltp": latest_close, "change": stock_change, "mode": "Live", "resolved_ticker": original_symbol}
+    except Exception:
+        pass
+        
+    return {"ltp": 0.00, "change": 0.00, "mode": "Failed Resolution", "resolved_ticker": ticker_symbol}
 
 # ---------------- ML MODEL LOADING ----------------
 @st.cache_resource
@@ -268,31 +289,36 @@ with stock_tab:
     st.markdown('<div class="content-panel">', unsafe_allow_html=True)
     st.markdown('<div class="panel-header">🏢 Asset Search & Quantitative Analyzer</div>', unsafe_allow_html=True)
     
-    stock_ticker_input = st.text_input("Search Stock Ticker Symbol (Include market suffix, ex: RELIANCE.NS, SBIN.NS, TCS.NS)", value="RELIANCE.NS")
+    stock_ticker_input = st.text_input("Search Stock Ticker Symbol (e.g., RELIANCE, SBIN, TCS, INFY or AAPL)", value="RELIANCE")
     search_stock_btn = st.button("🔍 RUN POSITION ASSESSMENT")
     
     if search_stock_btn and stock_ticker_input:
         with st.spinner("Analyzing ticker risk barriers..."):
-            stock_profile = fetch_live_stock_telemetry(stock_ticker_input.strip().upper())
-            s_ltp = stock_profile["ltp"]
-            s_change = stock_profile["change"]
+            stock_profile = fetch_live_stock_telemetry(stock_ticker_input)
             
-            s_entry = round(s_ltp * 1.002, 2)
-            s_target = round(s_ltp * 1.030, 2)
-            s_sl = round(s_ltp * 0.985, 2)
-            
-            st.markdown(f"""
-            <div style="margin-top:10px; padding: 20px; background:#070A13; border:1px solid #1E293B; border-radius:10px;">
-                <h3 style="color:#FFFFFF; margin:0 0 15px 0; font-size:16px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">📋 Technical Structural Profile: {stock_ticker_input.upper()}</h3>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:12px;">
-                    <div class="stock-pill">Current Price (LTP): <span style="color:#60A5FA; display:block; margin-top:2px; font-size:16px;">₹ {s_ltp:,.2f}</span></div>
-                    <div class="stock-pill">Day Change: <span style="color:{'#10B981' if s_change >=0 else '#EF4444'}; display:block; margin-top:2px; font-size:16px;">{s_change:.2f}%</span></div>
-                    <div class="stock-pill" style="border-color:#1E3A8A;">Target Entry Price: <span style="color:#10B981; display:block; margin-top:2px; font-size:16px;">₹ {s_entry:,.2f}</span></div>
-                    <div class="stock-pill" style="border-color:#1E3A8A;">Calculated Target: <span style="color:#10B981; display:block; margin-top:2px; font-size:16px;">₹ {s_target:,.2f}</span></div>
-                    <div class="stock-pill" style="border-color:#5B21B6;">Stop Loss (SL): <span style="color:#EF4444; display:block; margin-top:2px; font-size:16px;">₹ {s_sl:,.2f}</span></div>
+            if stock_profile["mode"] == "Failed Resolution":
+                st.error(f"❌ Could not resolve data streams for '{stock_ticker_input.upper()}'. Check symbol inputs format.")
+            else:
+                s_ltp = stock_profile["ltp"]
+                s_change = stock_profile["change"]
+                resolved_name = stock_profile["resolved_ticker"]
+                
+                s_entry = round(s_ltp * 1.002, 2)
+                s_target = round(s_ltp * 1.030, 2)
+                s_sl = round(s_ltp * 0.985, 2)
+                
+                st.markdown(f"""
+                <div style="margin-top:10px; padding: 20px; background:#070A13; border:1px solid #1E293B; border-radius:10px;">
+                    <h3 style="color:#FFFFFF; margin:0 0 15px 0; font-size:16px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">📋 Technical Structural Profile: {resolved_name}</h3>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:12px;">
+                        <div class="stock-pill">Current Price (LTP): <span style="color:#60A5FA; display:block; margin-top:2px; font-size:16px;">₹ {s_ltp:,.2f}</span></div>
+                        <div class="stock-pill">Day Change: <span style="color:{'#10B981' if s_change >=0 else '#EF4444'}; display:block; margin-top:2px; font-size:16px;">{s_change:.2f}%</span></div>
+                        <div class="stock-pill" style="border-color:#1E3A8A;">Target Entry Price: <span style="color:#10B981; display:block; margin-top:2px; font-size:16px;">₹ {s_entry:,.2f}</span></div>
+                        <div class="stock-pill" style="border-color:#1E3A8A;">Calculated Target: <span style="color:#10B981; display:block; margin-top:2px; font-size:16px;">₹ {s_target:,.2f}</span></div>
+                        <div class="stock-pill" style="border-color:#5B21B6;">Stop Loss (SL): <span style="color:#EF4444; display:block; margin-top:2px; font-size:16px;">₹ {s_sl:,.2f}</span></div>
+                    </div>
                 </div>
-            </div>
-            """, unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ---------------- STOCKXY FOOTER CONSOLE BANNER ----------------
